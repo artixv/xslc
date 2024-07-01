@@ -4,12 +4,17 @@ pragma solidity ^0.8.0;
 
 import "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
 import "./interfaces/ixinterface.sol";
+import "./interfaces/iexchangeRoom.sol";
 
 contract slcOracle {
     address public  slcAddress;
     uint256 public  slcValue;
     address public  pythAddr;
     address public  xInterface; 
+    address public  exchangRoomAddr;
+    address public  xcfxaddr;
+    address public  sxcfxaddr;
+    address public  wxcfxaddr;// wxcfx == cfx
 
     address public setter;
     address newsetter;
@@ -46,10 +51,26 @@ contract slcOracle {
         xInterface = _xInterface;
         pythAddr = _pythAddr;
     }
+    function cfxsetup( address _xcfxaddr,
+                       address _sxcfxaddr,
+                       address _exchangRoomAddr,
+                       address _wxcfxaddr ) external onlySetter{
+        xcfxaddr = _xcfxaddr;
+        sxcfxaddr = _sxcfxaddr;
+        wxcfxaddr = _wxcfxaddr;
+        exchangRoomAddr = _exchangRoomAddr;
+    }
 
     function TokenToPythIdSetup(address tokenAddress, bytes32 pythId) external onlySetter{
         TokenToPythId[tokenAddress] = pythId;
     }
+    //-----------------------------------Special token handling----------------------------------------
+
+    function xcfxToCFXPrice() public view returns(uint _xcfxPrice){
+        (_xcfxPrice,) = iexchangeRoom(exchangRoomAddr).XCFX_burn_estim(1 ether);
+    }
+
+    //-----------------------------------------------------------------------------------
   
     // function getPrice(
     //     bytes32 id
@@ -76,25 +97,47 @@ contract slcOracle {
     }
 
     function getXUnionPrice(address token) public view returns (uint price){
-        address pair = ixInterface(xInterface).getPair(token, slcAddress);
-        price = ixInterface(xInterface).getLpPrice( pair)* slcValue / 1 ether;
+        address pair;
+        try ixInterface(xInterface).getPair(token, slcAddress){
+            pair = ixInterface(xInterface).getPair(token, slcAddress);
+        } catch {
+            // Do something in any other case
+            return 0;
+        }
+        
+        try ixInterface(xInterface).getLpPrice( pair) {
+            price = ixInterface(xInterface).getLpPrice( pair)* slcValue / 1 ether;
+            // Do something if the call succeeds
+        } catch {
+            // Do something in any other case
+            return 0;
+        }
     }
 
     function getSwappiPrice(address token) public view returns (uint price){}
 
     function getPrice(address token) external view returns (uint price){
-        uint pythPrice = getPythPrice(token);
+        uint x ;
         if(token == slcAddress){
             return slcValue;
+        }else if(token == sxcfxaddr){
+            token = wxcfxaddr;
+        }else if(token == xcfxaddr){
+            token = wxcfxaddr;
+            x=1;
         }
-        if(pythPrice != 0){
+
+        price = getXUnionPrice(token);
+        uint pythPrice = getPythPrice(token);
+        if(pythPrice != 0 && price != 0){
             price = (getXUnionPrice(token) + pythPrice) / 2;
-        }else{
-            price = getXUnionPrice(token);
+        }else if(pythPrice != 0){
+            price = pythPrice;
+        }
+
+        if(x == 1){
+            price = price * xcfxToCFXPrice() / 1 ether;
         }
     }
 
-    // ======================== contract base methods =====================
-    fallback() external payable {}
-    receive() external payable {}
 }
