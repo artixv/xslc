@@ -18,7 +18,8 @@ interface iSlcVaults{
     function viewUsersHealthFactor(address user) external view returns(uint userHealthFactor, uint userAssetsValue, uint userBorrowedSLCAmount, uint userAvailbleBorrowedSLCAmount);
     function licensedAssetOverview() external view returns(uint totalValueOfMortgagedAssets, uint _slcSupply, uint _slcValue);
     function userAssetOverview(address user) external view returns(uint[] memory _amount, uint SLCborrowed);
-    
+    //-------------------------------mode setting------------------------------------
+    function userModeSetting(uint8 _mode,address _userModeAssetsAddress,address user) external;
     //---------------------------- User Used Function--------------------------------
     function slcTokenBuyEstimate(address TokenAddr, uint amount) external view returns(uint outputAmount);
     function slcTokenSellEstimate(address TokenAddr, uint amount) external view returns(uint outputAmount);

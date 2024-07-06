@@ -130,11 +130,14 @@ contract slcVaults  {
         licensedAssets[_asset].maxDepositAmount = MaxDepositAmount;
     }
 
-    function userModeSetting(uint8 _mode,address _userModeAssetsAddress) public {
-        require(userObtainedSLCAmount[msg.sender] == 0,"SLC Vaults: Cant Change Mode before return all SLC.");
-        userMode[msg.sender] = _mode;
-        userModeAssetsAddress[msg.sender] = _userModeAssetsAddress;
-        emit UserModeSetting(msg.sender, _mode, _userModeAssetsAddress);
+    function userModeSetting(uint8 _mode,address _userModeAssetsAddress,address user) public {
+        if(slcInterface[msg.sender]==false){
+            require(user == msg.sender,"SLC Vaults: Not registered as slcInterface or user need be msg.sender!");
+        }
+        require(userObtainedSLCAmount[user] == 0,"SLC Vaults: Cant Change Mode before return all SLC.");
+        userMode[user] = _mode;
+        userModeAssetsAddress[user] = _userModeAssetsAddress;
+        emit UserModeSetting(user, _mode, _userModeAssetsAddress);
     }
 
     //----------------------------- View Function------------------------------------

@@ -52,16 +52,25 @@ contract slcInterface  {
         wxCFX = _wxCFX;
     }
 
-    function viewUsersHealthFactor(address user) external view returns(uint userHealthFactor, uint userAssetsValue, uint userBorrowedSLCAmount, uint userAvailbleBorrowedSLCAmount){
+    function viewUsersHealthFactor(address user) external view returns(uint userHealthFactor, 
+                                                                       uint userAssetsValue, 
+                                                                       uint userBorrowedSLCAmount, 
+                                                                       uint userAvailbleBorrowedSLCAmount){
         return iSlcVaults(slcVaults).viewUsersHealthFactor(user);
     }
 
-    function licensedAssetOverview() public view returns(uint totalValueOfMortgagedAssets, uint _slcSupply, uint _slcValue){
+    function licensedAssetOverview() public view returns(uint totalValueOfMortgagedAssets, 
+                                                         uint _slcSupply, 
+                                                         uint _slcValue){
         return iSlcVaults(slcVaults).licensedAssetOverview();
     }
 
     function userAssetOverview(address user) external view returns(uint[] memory _amount, uint SLCborrowed){
         return iSlcVaults(slcVaults).userAssetOverview(user);
+    }
+
+    function userModeSetting(uint8 _mode,address _userModeAssetsAddress) external{
+        iSlcVaults(slcVaults).userModeSetting( _mode, _userModeAssetsAddress,msg.sender);
     }
     
     //---------------------------- User Used Function--------------------------------
@@ -120,9 +129,6 @@ contract slcInterface  {
     }
     //---------------------------- CFX  Function----------------------------
     function buySlcByCFX() public payable returns(uint outputAmount){
-        // address payable receiver = payable(this);
-        // (bool success, ) = receiver.call{value:msg.value}("");
-        // require(success,"X SLC Interface: CFX Transfer Failed");
         iwxCFX(wxCFX).deposit{value:msg.value}();
         IERC20(wxCFX).approve(slcVaults, msg.value);
         outputAmount = iSlcVaults(slcVaults).slcTokenBuy( wxCFX , msg.value);
@@ -150,13 +156,9 @@ contract slcInterface  {
 
     // licensed Assets Pledge
     function CFXPledge() public payable {
-        // address payable receiver = payable(this);
-        // (bool success, ) = receiver.call{value:msg.value}("");
-        // require(success,"X SLC Interface: CFX Transfer Failed");
         iwxCFX(wxCFX).deposit{value:msg.value}();
         IERC20(wxCFX).approve(slcVaults, msg.value);
         iSlcVaults(slcVaults).licensedAssetsPledge( wxCFX, msg.value, msg.sender);
-        // licensedAssetsPledge(wxCFX, msg.value);
     }
     // redeem Pledged Assets
     function redeemCFX(uint amount) public {
