@@ -61,8 +61,9 @@ contract slcVaults  {
         _;
     }
     //----------------------------- event -----------------------------
+    event LicensedAssetsSetting(address indexed asset, uint MaxLTV, uint LiqPenalty,uint MaxDepositAmount);
     event UserModeSetting(address indexed msgSender, uint8 _mode,address _userModeAssetsAddress);
-
+    event SlcInterfaceSetup(address indexed _interface, bool _ToF);
     event SlcTokenBuy(address indexed buyer,address TokenAddr, uint amount,uint outputAmount);
     event SlcTokenSell(address indexed seller,address TokenAddr, uint amount, uint outputAmount);
     event LicensedAssetsPledge(address indexed msgSender, address TokenAddr, uint amount, address user);
@@ -104,6 +105,7 @@ contract slcVaults  {
     }
     function setSlcInterface(address _ifSlcInterface, bool _ToF) external onlySetter{
         slcInterface[_ifSlcInterface] = _ToF;
+        emit SlcInterfaceSetup(_ifSlcInterface, _ToF);
     }
 
     // Evaluate the value of superLibraCoin
@@ -122,12 +124,14 @@ contract slcVaults  {
         licensedAssets[_asset].maximumLTV = MaxLTV;
         licensedAssets[_asset].liquidationPenalty = LiqPenalty;
         licensedAssets[_asset].maxDepositAmount = MaxDepositAmount;
+        emit LicensedAssetsSetting(_asset, MaxLTV, LiqPenalty, MaxDepositAmount);
     }
     function licensedAssetsReset(address _asset, uint MaxLTV, uint LiqPenalty,uint MaxDepositAmount) public onlySetter {
         require(licensedAssets[_asset].assetAddr == _asset,"SLC Vaults: asset is Not registered!");
         licensedAssets[_asset].maximumLTV = MaxLTV;
         licensedAssets[_asset].liquidationPenalty = LiqPenalty;
         licensedAssets[_asset].maxDepositAmount = MaxDepositAmount;
+        emit LicensedAssetsSetting(_asset, MaxLTV, LiqPenalty, MaxDepositAmount);
     }
 
     function userModeSetting(uint8 _mode,address _userModeAssetsAddress,address user) public {
