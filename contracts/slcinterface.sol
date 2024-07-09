@@ -65,21 +65,49 @@ contract slcInterface  {
         return iSlcVaults(slcVaults).licensedAssetOverview();
     }
 
-    function userAssetOverview(address user) external view returns(uint[] memory _amount, uint SLCborrowed){
+    function userAssetOverview(address user) external view returns(address[] memory tokens, uint[] memory _amount, uint SLCborrowed){
         return iSlcVaults(slcVaults).userAssetOverview(user);
     }
+
+    function assetsSerialNumber(uint num) external view returns(address){
+        return iSlcVaults(slcVaults).assetsSerialNumber(num);
+    }
+
+    //---------------------------- User Setting Function --------------------------------
 
     function userModeSetting(uint8 _mode,address _userModeAssetsAddress) external{
         iSlcVaults(slcVaults).userModeSetting( _mode, _userModeAssetsAddress,msg.sender);
     }
     
-    //---------------------------- User Used Function--------------------------------
-    function slcTokenBuyEstimate(address TokenAddr, uint amount) external view returns(uint outputAmount){
-        return iSlcVaults(slcVaults).slcTokenBuyEstimate( TokenAddr, amount);
+    //---------------------------- User Used Function ----------------------------------
+    function userMode(address user) external view returns(uint8 mode, address userSetAssets){
+        mode = iSlcVaults(slcVaults).userMode(user);
+        userSetAssets = iSlcVaults(slcVaults).userModeAssetsAddress(user);
     }
-    function slcTokenSellEstimate(address TokenAddr, uint amount) external view returns(uint outputAmount){
-        return iSlcVaults(slcVaults).slcTokenSellEstimate( TokenAddr, amount);
+    
+    function usersHealthFactorEstimate(address user,address token,uint amount,bool operator) external view returns(uint userHealthFactor){
+        return iSlcVaults(slcVaults).usersHealthFactorEstimate(user, token, amount, operator);
     }
+
+    function slcTokenBuyEstimateOut(address TokenAddr, uint amount) external view returns(uint outputAmount){
+        return iSlcVaults(slcVaults).slcTokenBuyEstimateOut( TokenAddr, amount);
+    }
+    function slcTokenSellEstimateOut(address TokenAddr, uint amount) external view returns(uint outputAmount){
+        return iSlcVaults(slcVaults).slcTokenSellEstimateOut( TokenAddr, amount);
+    }
+    function slcTokenBuyEstimateIn(address TokenAddr, uint amount) external view returns(uint inputAmount){
+        return iSlcVaults(slcVaults).slcTokenBuyEstimateIn( TokenAddr, amount);
+    }
+    function slcTokenSellEstimateIn(address TokenAddr, uint amount) external view returns(uint inputAmount){
+        return iSlcVaults(slcVaults).slcTokenSellEstimateIn( TokenAddr, amount);
+    }
+
+    // function slcTokenBuyEstimate(address TokenAddr, uint amount) external view returns(uint outputAmount){
+    //     return iSlcVaults(slcVaults).slcTokenBuyEstimate( TokenAddr, amount);
+    // }
+    // function slcTokenSellEstimate(address TokenAddr, uint amount) external view returns(uint outputAmount){
+    //     return iSlcVaults(slcVaults).slcTokenSellEstimate( TokenAddr, amount);
+    // }
     function slcTokenBuy(address TokenAddr, uint amount) public  returns(uint outputAmount){
         IERC20(TokenAddr).transferFrom(msg.sender,address(this),amount);
         IERC20(TokenAddr).approve(slcVaults, amount);

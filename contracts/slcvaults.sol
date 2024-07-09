@@ -194,17 +194,19 @@ contract slcVaults  {
         _slcValue = slcValue;
     }
 
-    function userAssetOverview(address user) public view returns(uint[] memory _amount, uint SLCborrowed){
+    function userAssetOverview(address user) public view returns(address[] memory tokens, uint[] memory amounts, uint SLCborrowed){
         require(assetsSerialNumber.length < 100,"SLC Vaults: Too Many Assets");
-        _amount = new uint[](assetsSerialNumber.length);
+        amounts = new uint[](assetsSerialNumber.length);
+        tokens = new address[](assetsSerialNumber.length);
         for(uint i=0;i<assetsSerialNumber.length;i++){
-            _amount[i] = userAssetsMortgageAmount[user][assetsSerialNumber[i]];
+            tokens[i] = assetsSerialNumber[i];
+            amounts[i] = userAssetsMortgageAmount[user][tokens[i]];
         }
         SLCborrowed = userObtainedSLCAmount[user];
     }
     
     //---------------------------- User Used Function--------------------------------
-    function slcTokenBuyEstimate(address TokenAddr, uint amount) public view returns(uint outputAmount){
+    function slcTokenBuyEstimateOut(address TokenAddr, uint amount) public view returns(uint outputAmount){
         // outputAmount = ixInterface(xInterface).xExchangeEstimateInput(address[] memory tokens,uint amountIn);
         address[] memory tokens = new address[](3);
 
@@ -219,7 +221,7 @@ contract slcVaults  {
         }
     }
 
-    function slcTokenSellEstimate(address TokenAddr, uint amount) public view returns(uint outputAmount){
+    function slcTokenSellEstimateOut(address TokenAddr, uint amount) public view returns(uint outputAmount){
         // outputAmount = ixInterface(xInterface).swapCalculation2(_lp, slc, amount);
         address[] memory tokens = new address[](2);
 
@@ -228,6 +230,31 @@ contract slcVaults  {
 
         (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput(tokens, amount);
         outputAmount = outputAmount * 95 / 100;
+    }
+    function slcTokenBuyEstimateIn(address TokenAddr, uint amount) public view returns(uint inputAmount){
+        // outputAmount = ixInterface(xInterface).xExchangeEstimateInput(address[] memory tokens,uint amountIn);
+        address[] memory tokens = new address[](3);
+
+        tokens[0] = TokenAddr;
+        tokens[1] = superLibraCoin;
+        tokens[2] = mainCollateralToken;
+        if(tokens[0] == tokens[2]){
+            inputAmount = amount * 1 ether * 100 / (99 * slcValue);
+        }else{
+            (inputAmount,) = ixInterface(xInterface).xExchangeEstimateOutput(tokens, amount * 1 ether * 100 / (98 * slcValue));
+            // inputAmount = inputAmount * 1 ether * 98 / (100 * slcValue);
+        }
+    }
+
+    function slcTokenSellEstimateIn(address TokenAddr, uint amount) public view returns(uint inputAmount){
+        // outputAmount = ixInterface(xInterface).swapCalculation2(_lp, slc, amount);
+        address[] memory tokens = new address[](2);
+
+        tokens[0] = superLibraCoin;
+        tokens[1] = TokenAddr;
+
+        (inputAmount,) = ixInterface(xInterface).xExchangeEstimateOutput(tokens, amount * 100 / 95);
+        // outputAmount = outputAmount * 95 / 100;
     }
     //---------------------------- Mint&Burn Function--------------------------------
     // Use licensedAssets to mint SLC
@@ -297,7 +324,6 @@ contract slcVaults  {
         userAssetsMortgageAmount[user][TokenAddr] += amount;
         userAssetsMortgageAmountSum[TokenAddr] += amount;
         emit LicensedAssetsPledge(msg.sender, TokenAddr, amount, user);
-    
     }
 
     // redeem Pledged Assets
@@ -353,6 +379,70 @@ contract slcVaults  {
         emit ReturnSLC(msg.sender, amount, user);
 
     }
+    //-----------------------------------------------------------------------------------------------------
+    function usersHealthFactorEstimate(address user,address token,uint amount,bool operator) public view returns(uint userHealthFactor){
+        uint tempValue;
+        uint[2] memory tempLoanToValue;
+        require(assetsSerialNumber.length < 100,"SLC Vaults: Too Many Assets");
+         
+        for(uint i=0;i<assetsSerialNumber.length;i++){
+            if(licensedAssets[assetsSerialNumber[i]].maxDepositAmount == 0){
+                if(token == assetsSerialNumber[i]){
+                    tempValue = amount;
+                }else{
+                    tempValue = 0;
+                }
+                if(operator){
+                    tempLoanToValue[0] += (userAssetsMortgageAmount[user][assetsSerialNumber[i]] - tempValue) * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether
+                                        * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
+                }else{
+                    tempLoanToValue[0] += (userAssetsMortgageAmount[user][assetsSerialNumber[i]] + tempValue) * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether
+                                        * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
+                }
+            }else if(userModeAssetsAddress[user]==assetsSerialNumber[i]){
+                if(token == assetsSerialNumber[i]){
+                    tempValue = amount;
+                }else{
+                    tempValue = 0;
+                }
+                if(operator){
+                    tempLoanToValue[1] += (userAssetsMortgageAmount[user][assetsSerialNumber[i]] - tempValue) * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether
+                                        * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
+                }else{
+                    tempLoanToValue[1] += (userAssetsMortgageAmount[user][assetsSerialNumber[i]] + tempValue) * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether
+                                        * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
+                }
+            }
+        }
+        if(token == superLibraCoin){
+            tempValue = amount;
+        }else{
+            tempValue = 0;
+        }
+
+        if(userObtainedSLCAmount[user] > 0){
+            if(userMode[user] == 0){
+                if(operator){
+                    userHealthFactor = (tempLoanToValue[0] * 1 ether / (userObtainedSLCAmount[user] - tempValue)) * 1 ether / slcValue;
+                }else{
+                    userHealthFactor = (tempLoanToValue[0] * 1 ether / (userObtainedSLCAmount[user] + tempValue)) * 1 ether / slcValue;
+                }
+                
+            }else{
+                if(operator){
+                    userHealthFactor = (tempLoanToValue[1] * 1 ether / (userObtainedSLCAmount[user] - tempValue)) * 1 ether / slcValue;
+                }else{
+                    userHealthFactor = (tempLoanToValue[1] * 1 ether / (userObtainedSLCAmount[user] + tempValue)) * 1 ether / slcValue;
+                }
+            }
+        }else{
+            userHealthFactor = 1000 ether;
+        }
+
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------
 
     // Token Rebalance 
     function rebalance(address[] memory tokens, uint amount) public onlyRebalancer() returns(uint outputAmount){
