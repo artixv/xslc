@@ -71,6 +71,12 @@ contract slcVaults  {
     event ObtainSLC(address indexed msgSender, uint amount, address user) ;
     event ReturnSLC(address indexed msgSender, uint amount, address user) ;
 
+    event SlCValue(uint value);
+    event MainCollateralToken(address token);
+    event Rebalance(address[] tokens, uint amount, uint outputAmount);
+    event MortgagedAmountDisposed(address indexed token, uint amount);
+    event MortgagedAmountReturned(address indexed token, uint amount);
+
     event TokenLiquidate(address indexed user,address token, uint amount, uint outputAmount) ;
 
     //------------------------------------------------------------------
@@ -111,10 +117,12 @@ contract slcVaults  {
     // Evaluate the value of superLibraCoin
     function slcValueRevaluate(uint newVaule) public  onlySetter {
         slcValue = newVaule;
+        emit SlCValue(newVaule);
     }
 
     function mainCollateralTokenSetting(address token) public  onlySetter {
         mainCollateralToken = token;
+        emit MainCollateralToken(token);
     }
     function licensedAssetsRegister(address _asset, uint MaxLTV, uint LiqPenalty,uint MaxDepositAmount) public onlySetter {
         require(licensedAssets[_asset].assetAddr == address(0),"SLC Vaults: asset already registered!");
@@ -442,9 +450,7 @@ contract slcVaults  {
         }else{
             userHealthFactor = 1000 ether;
         }
-
     }
-
 
     //-----------------------------------------------------------------------------------------------------
 
@@ -453,17 +459,21 @@ contract slcVaults  {
         IERC20(tokens[0]).approve(xInterface, amount);
         (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput(tokens, amount);
         outputAmount = ixInterface(xInterface).xexchange(tokens,amount,outputAmount,outputAmount / 100, block.timestamp + 100);
+        emit Rebalance(tokens, amount, outputAmount);
     }
     // Assets excess Disposal
     function excessDisposal(address token, uint amount) public onlyRebalancer(){
         require(IERC20(token).balanceOf(address(this)) > amount + userAssetsMortgageAmountSum[token],"SLC Vaults: Cant Do Excess Disposal, asset not enough!");
         IERC20(token).transfer(msg.sender,amount);
         licensedAssets[token].mortgagedAmountDisposed += amount;
+        emit MortgagedAmountDisposed(token, amount);
+    
     }
     function excessAssetsReturn(address token, uint amount) public onlyRebalancer(){
         // require(IERC20(token).balanceOf(address(this)) > amount + userAssetsMortgageAmountSum[token],"SLC Vaults: Cant Do Excess Disposal, asset not enough!");
         IERC20(token).transfer(msg.sender,amount);
         licensedAssets[token].mortgagedAmountReturned += amount;
+        emit MortgagedAmountReturned(token, amount);
     }
 
     //------------------------------ Liquidate Function------------------------------
@@ -488,7 +498,6 @@ contract slcVaults  {
             outputAmount = ixInterface(xInterface).xexchange(tokens, amount, outputAmount, outputAmount / 100, block.timestamp + 100);
             outputAmount = outputAmount * 1 ether * (10000-licensedAssets[token].liquidationPenalty) / (10000 * slcValue);
         }
-        
         require(userObtainedSLCAmount[user] >= outputAmount,"");
         slcUnsecuredIssuancesAmount += outputAmount;
         userObtainedSLCAmount[user] -= outputAmount;
@@ -496,9 +505,6 @@ contract slcVaults  {
         userAssetsMortgageAmount[user][token] -= amount;
 
         IERC20(token).transfer(msg.sender,amount/10000);
-        // address payable receiver = payable(msg.sender);
-        // (bool success, ) = receiver.call{value:0.1 ether}("");
-        // require(success,"SLC Vaults: CFX Transfer Failed");
         emit TokenLiquidate(msg.sender, token, amount, outputAmount);
     }
     function tokenLiquidateEstimate(address user,address token) public view returns(uint maxAmount){
@@ -522,6 +528,5 @@ contract slcVaults  {
         if(maxAmount > userAssetsMortgageAmount[user][token]){
             maxAmount = userAssetsMortgageAmount[user][token];
         }
-        
     }
 }

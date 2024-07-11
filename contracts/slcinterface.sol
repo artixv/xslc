@@ -102,12 +102,6 @@ contract slcInterface  {
         return iSlcVaults(slcVaults).slcTokenSellEstimateIn( TokenAddr, amount);
     }
 
-    // function slcTokenBuyEstimate(address TokenAddr, uint amount) external view returns(uint outputAmount){
-    //     return iSlcVaults(slcVaults).slcTokenBuyEstimate( TokenAddr, amount);
-    // }
-    // function slcTokenSellEstimate(address TokenAddr, uint amount) external view returns(uint outputAmount){
-    //     return iSlcVaults(slcVaults).slcTokenSellEstimate( TokenAddr, amount);
-    // }
     function slcTokenBuy(address TokenAddr, uint amount) public  returns(uint outputAmount){
         IERC20(TokenAddr).transferFrom(msg.sender,address(this),amount);
         IERC20(TokenAddr).approve(slcVaults, amount);

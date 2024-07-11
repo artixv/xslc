@@ -17,7 +17,6 @@ interface iSlcVaults{
     //----------------------------- View Function------------------------------------
     function viewUsersHealthFactor(address user) external view returns(uint userHealthFactor, uint userAssetsValue, uint userBorrowedSLCAmount, uint userAvailbleBorrowedSLCAmount);
     function licensedAssetOverview() external view returns(uint totalValueOfMortgagedAssets, uint _slcSupply, uint _slcValue);
-    // function userAssetOverview(address user) external view returns(uint[] memory _amount, uint SLCborrowed);
     function userAssetOverview(address user) external view returns(address[] memory tokens, uint[] memory amounts, uint SLCborrowed);
 
     function assetsSerialNumber(uint) external view returns(address);
@@ -33,8 +32,6 @@ interface iSlcVaults{
     function slcTokenBuyEstimateIn(address TokenAddr, uint amount) external view returns(uint inputAmount);
     function slcTokenSellEstimateIn(address TokenAddr, uint amount) external view returns(uint inputAmount);
 
-    // function slcTokenBuyEstimate(address TokenAddr, uint amount) external view returns(uint outputAmount);
-    // function slcTokenSellEstimate(address TokenAddr, uint amount) external view returns(uint outputAmount);
     function slcTokenBuy(address TokenAddr, uint amount) external  returns(uint outputAmount);
     function slcTokenSell(address TokenAddr, uint amount) external  returns(uint outputAmount);
     //---------------------------- borrow & lend  Function----------------------------
@@ -46,16 +43,5 @@ interface iSlcVaults{
     function obtainSLC(uint amount, address user) external ;
     // return SLC coin
     function returnSLC(uint amount, address user) external ;
-
-
-    // mapping(address => licensedAsset) public licensedAssets;
-    // address[] public assetsSerialNumber;
-    
-    // // address is user address, second address is licensedAssets address,  uint is the amount of assets
-    // mapping(address => mapping(address => uint)) userAssetsMortgageAmount;
-    // mapping(address => uint) userAssetsMortgageAmountSum;
-    // mapping(address => uint) userObtainedSLCAmount;
-
-    // mapping(address => uint8) public userMode; //0 High liquidity collateral mode; 1 Risk isolation mode
 
 }
