@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/ixinterface.sol";
 import "./interfaces/islc.sol";
 import "./interfaces/islcoracle.sol";
+import "./interfaces/iRewardMini.sol";
 
 contract slcVaults  {
     address public superLibraCoin;
@@ -16,6 +17,7 @@ contract slcVaults  {
 
     address public xInterface;
     address public oracleAddr;
+    address public rewardContract;
 
     address public setter;
     address newsetter;
@@ -108,6 +110,9 @@ contract slcVaults  {
         mainCollateralToken = _mainCollateralToken;
         xInterface = _xInterface;
         oracleAddr = _oracleAddr;
+    }
+    function rewardContractSetup(address _rewardContract) external onlySetter{
+        rewardContract = _rewardContract;
     }
     function setSlcInterface(address _ifSlcInterface, bool _ToF) external onlySetter{
         slcInterface[_ifSlcInterface] = _ToF;
@@ -374,6 +379,8 @@ contract slcVaults  {
         }
         (factor, ,,) = viewUsersHealthFactor(user);
         require(factor >= 1.2 ether,"Your Health Factor <= 1.2, Cant obtain SLC");
+
+        iRewardMini(rewardContract).recordUpdate(user,userObtainedSLCAmount[user]);
         emit ObtainSLC(msg.sender, amount, user) ;
     
     }
@@ -388,6 +395,8 @@ contract slcVaults  {
         
         userObtainedSLCAmount[user] -= amount;
         iSlc(superLibraCoin).burnSLC(msg.sender, amount);
+
+        iRewardMini(rewardContract).recordUpdate(user,userObtainedSLCAmount[user]);
         emit ReturnSLC(msg.sender, amount, user);
 
     }

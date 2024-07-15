@@ -13,16 +13,16 @@ contract slcInterface  {
     address public setter;
     address newsetter;
 
-    struct licensedAsset{
-        address  assetAddr;
-        // loan-to-value (LTV) ratio is a measurement lenders use to compare your loan amount for a home against the value of that property
-        uint     maximumLTV;           // MAX = 10000
-        uint     liquidationPenalty;   // MAX = 10000 ,default is 500(5%)
-        // default is 0, means no limits; if > 0, have limits : 1 ether = 1 slc
-        uint     maxDepositAmount;
-        uint     mortgagedAmountDisposed;
-        uint     mortgagedAmountReturned;
-    }
+    // struct licensedAsset{
+    //     address  assetAddr;
+    //     // loan-to-value (LTV) ratio is a measurement lenders use to compare your loan amount for a home against the value of that property
+    //     uint     maximumLTV;           // MAX = 10000
+    //     uint     liquidationPenalty;   // MAX = 10000 ,default is 500(5%)
+    //     // default is 0, means no limits; if > 0, have limits : 1 ether = 1 slc
+    //     uint     maxDepositAmount;
+    //     uint     mortgagedAmountDisposed;
+    //     uint     mortgagedAmountReturned;
+    // }
     //----------------------------modifier ----------------------------
     modifier onlySetter() {
         require(msg.sender == setter, 'SLC Vaults: Only Manager Use');
@@ -52,11 +52,46 @@ contract slcInterface  {
         wxCFX = _wxCFX;
     }
 
-    function viewUsersHealthFactor(address user) external view returns(uint userHealthFactor, 
-                                                                       uint userAssetsValue, 
-                                                                       uint userBorrowedSLCAmount, 
-                                                                       uint userAvailbleBorrowedSLCAmount){
+    function viewUsersHealthFactor(address user) public view returns(uint userHealthFactor, 
+                                                                    uint userAssetsValue, 
+                                                                    uint userBorrowedSLCAmount, 
+                                                                    uint userAvailbleBorrowedSLCAmount){
         return iSlcVaults(slcVaults).viewUsersHealthFactor(user);
+    }
+    function usersRiskDetails(address user) external view returns(uint userHealthFactor, 
+                                                      uint userValueUsedRatio, 
+                                                      uint userMaxUsedRatio, 
+                                                      uint tokenLiquidateRatio){
+        uint[4] memory tempRustFactor;
+        (tempRustFactor[0],tempRustFactor[1],tempRustFactor[2],tempRustFactor[3]) = viewUsersHealthFactor(user);
+        userHealthFactor = tempRustFactor[0];
+        if(tempRustFactor[1] > 0){
+            userValueUsedRatio = tempRustFactor[2] * 10000 / tempRustFactor[1];
+            userMaxUsedRatio =  (tempRustFactor[2] + tempRustFactor[3]) * 10000 / tempRustFactor[1];
+        }else{
+            userValueUsedRatio = 0;
+            userMaxUsedRatio =  0;
+        }
+        
+        address[] memory tokens;
+        uint[] memory _amount;
+        (tokens,_amount, ) = userAssetOverview(user);
+        uint _count;
+        iSlcVaults.licensedAsset memory usefulAsset;
+        for(uint i=0;i<tokens.length;i++){
+            if(_amount[i]>0){
+                usefulAsset = licensedAssets(tokens[i]);
+                tokenLiquidateRatio += usefulAsset.maximumLTV;
+                _count += 1;
+            }
+        }
+        if(_count > 1){
+            tokenLiquidateRatio = tokenLiquidateRatio / _count;
+        }
+    }
+
+    function licensedAssets(address token) public view returns(iSlcVaults.licensedAsset memory asset){
+        asset = iSlcVaults(slcVaults).licensedAssets(token);
     }
 
     function licensedAssetOverview() public view returns(uint totalValueOfMortgagedAssets, 
@@ -65,7 +100,7 @@ contract slcInterface  {
         return iSlcVaults(slcVaults).licensedAssetOverview();
     }
 
-    function userAssetOverview(address user) external view returns(address[] memory tokens, uint[] memory _amount, uint SLCborrowed){
+    function userAssetOverview(address user) public view returns(address[] memory tokens, uint[] memory _amount, uint SLCborrowed){
         return iSlcVaults(slcVaults).userAssetOverview(user);
     }
 
@@ -88,7 +123,7 @@ contract slcInterface  {
     function usersHealthFactorEstimate(address user,address token,uint amount,bool operator) external view returns(uint userHealthFactor){
         return iSlcVaults(slcVaults).usersHealthFactorEstimate(user, token, amount, operator);
     }
-
+    
     function slcTokenBuyEstimateOut(address TokenAddr, uint amount) external view returns(uint outputAmount){
         return iSlcVaults(slcVaults).slcTokenBuyEstimateOut( TokenAddr, amount);
     }

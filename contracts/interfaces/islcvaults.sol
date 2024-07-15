@@ -14,18 +14,32 @@ interface iSlcVaults{
         uint     mortgagedAmountReturned;
     }
 
+    function licensedAssets(address) external view returns(licensedAsset memory);
+
     //----------------------------- View Function------------------------------------
-    function viewUsersHealthFactor(address user) external view returns(uint userHealthFactor, uint userAssetsValue, uint userBorrowedSLCAmount, uint userAvailbleBorrowedSLCAmount);
-    function licensedAssetOverview() external view returns(uint totalValueOfMortgagedAssets, uint _slcSupply, uint _slcValue);
-    function userAssetOverview(address user) external view returns(address[] memory tokens, uint[] memory amounts, uint SLCborrowed);
+    function viewUsersHealthFactor(address user) external view returns(uint userHealthFactor, 
+                                                                        uint userAssetsValue, 
+                                                                        uint userBorrowedSLCAmount, 
+                                                                        uint userAvailbleBorrowedSLCAmount);
+    function licensedAssetOverview() external view returns(uint totalValueOfMortgagedAssets, 
+                                                           uint _slcSupply, 
+                                                           uint _slcValue);
+    function userAssetOverview(address user) external view returns(address[] memory tokens, 
+                                                                   uint[] memory amounts, 
+                                                                   uint SLCborrowed);
 
     function assetsSerialNumber(uint) external view returns(address);
-    function usersHealthFactorEstimate(address user,address token,uint amount,bool operator) external view returns(uint userHealthFactor);
+    function usersHealthFactorEstimate(address user,
+                                       address token,
+                                       uint amount,
+                                       bool operator) external view returns(uint userHealthFactor);
     function userMode(address user) external view returns(uint8);
     function userModeAssetsAddress(address user) external view returns(address);
  
     //-------------------------------mode setting------------------------------------
-    function userModeSetting(uint8 _mode,address _userModeAssetsAddress,address user) external;
+    function userModeSetting(uint8 _mode,
+                             address _userModeAssetsAddress,
+                             address user) external;
     //---------------------------- User Used Function--------------------------------
     function slcTokenBuyEstimateOut(address TokenAddr, uint amount) external view returns(uint outputAmount);
     function slcTokenSellEstimateOut(address TokenAddr, uint amount) external view returns(uint outputAmount);
