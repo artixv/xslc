@@ -420,7 +420,7 @@ contract slcVaults  {
                     tempLoanToValue[0] += (userAssetsMortgageAmount[user][assetsSerialNumber[i]] + tempValue) * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether
                                         * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
                 }
-            }else if(userModeAssetsAddress[user]==assetsSerialNumber[i]){
+            }else if(userModeAssetsAddress[user] == assetsSerialNumber[i]){
                 if(token == assetsSerialNumber[i]){
                     tempValue = amount;
                 }else{
@@ -479,7 +479,6 @@ contract slcVaults  {
     
     }
     function excessAssetsReturn(address token, uint amount) public onlyRebalancer(){
-        // require(IERC20(token).balanceOf(address(this)) > amount + userAssetsMortgageAmountSum[token],"SLC Vaults: Cant Do Excess Disposal, asset not enough!");
         IERC20(token).transfer(msg.sender,amount);
         licensedAssets[token].mortgagedAmountReturned += amount;
         emit MortgagedAmountReturned(token, amount);

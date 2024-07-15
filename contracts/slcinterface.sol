@@ -56,7 +56,11 @@ contract slcInterface  {
                                                                     uint userAssetsValue, 
                                                                     uint userBorrowedSLCAmount, 
                                                                     uint userAvailbleBorrowedSLCAmount){
-        return iSlcVaults(slcVaults).viewUsersHealthFactor(user);
+        (userHealthFactor, 
+         userAssetsValue,  
+         userBorrowedSLCAmount, 
+         userAvailbleBorrowedSLCAmount) = iSlcVaults(slcVaults).viewUsersHealthFactor(user);
+         userHealthFactor = (userHealthFactor <= 1000 ether ? userHealthFactor : 1000 ether);
     }
     function usersRiskDetails(address user) external view returns(uint userHealthFactor, 
                                                       uint userValueUsedRatio, 
@@ -121,7 +125,8 @@ contract slcInterface  {
     }
     
     function usersHealthFactorEstimate(address user,address token,uint amount,bool operator) external view returns(uint userHealthFactor){
-        return iSlcVaults(slcVaults).usersHealthFactorEstimate(user, token, amount, operator);
+        userHealthFactor = iSlcVaults(slcVaults).usersHealthFactorEstimate(user, token, amount, operator);
+        userHealthFactor = (userHealthFactor <= 1000 ether ? userHealthFactor : 1000 ether);
     }
     
     function slcTokenBuyEstimateOut(address TokenAddr, uint amount) external view returns(uint outputAmount){
@@ -180,6 +185,13 @@ contract slcInterface  {
     }
     // return SLC coin
     function returnSLC(uint amount) public {
+        IERC20(superLibraCoin).transferFrom(msg.sender,address(this),amount);
+        IERC20(superLibraCoin).approve(slcVaults, amount);
+        iSlcVaults(slcVaults).returnSLC(amount, msg.sender);
+    }
+    function returnAllSLC() public {
+        uint amount;
+        (,,amount,) = viewUsersHealthFactor(msg.sender);
         IERC20(superLibraCoin).transferFrom(msg.sender,address(this),amount);
         IERC20(superLibraCoin).approve(slcVaults, amount);
         iSlcVaults(slcVaults).returnSLC(amount, msg.sender);
