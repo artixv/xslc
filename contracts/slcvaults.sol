@@ -332,7 +332,8 @@ contract slcVaults  {
             require(user == msg.sender,"SLC Vaults: Not registered as slcInterface or user need be msg.sender!");
         }
         require(amount > 0,"SLC Vaults: Cant Pledge 0 amount");
-        if(licensedAssets[TokenAddr].maxDepositAmount == 0){
+
+        if(licensedAssets[TokenAddr].maxDepositAmount == 0){ 
             require(userMode[user] == 0,"SLC Vaults: Wrong Mode, Need a  Popular Mode");
         }else{
             require((TokenAddr == userModeAssetsAddress[user]) && (userMode[user] == 1),"SLC Vaults: Wrong Mode, Need a  Non-Popular Mode");
@@ -349,11 +350,12 @@ contract slcVaults  {
             require(user == msg.sender,"SLC Vaults: Not registered as slcInterface or user need be msg.sender!");
         }
         require(amount > 0,"SLC Vaults: Cant Pledge 0 amount");
-        if(licensedAssets[TokenAddr].maxDepositAmount == 0){
+        /*  // seems no need to have these code
+        if(licensedAssets[TokenAddr].maxDepositAmount == 0){ 
             require(userMode[user] == 0,"SLC Vaults: Wrong Mode, Need a  Popular Mode");
         }else{
             require((TokenAddr == userModeAssetsAddress[user]) && (userMode[user] == 1),"SLC Vaults: Wrong Mode, Need a  Non-Popular Mode");
-        }
+        }*/
         userAssetsMortgageAmount[user][TokenAddr] -= amount;
         userAssetsMortgageAmountSum[TokenAddr] -= amount;
         uint factor;
