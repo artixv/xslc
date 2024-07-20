@@ -23,6 +23,8 @@ contract slcVaults  {
     address newsetter;
     address public rebalancer;
 
+    uint public latestBlockNumber;
+
     //  Assets Init:   USDT  USDC  BTC  ETH  CFX  xCFX sxCFX NUT  CFXs
     //  MaximumLTV:     95%   95%  90%  85%  65%  65%   75%  55%  55%
     //  LiqPenalty:      5%    5%   5%   5%   5%   5%    5%   5%   5%
@@ -234,7 +236,7 @@ contract slcVaults  {
             outputAmount = amount * 1 ether * 99 / (100 * slcValue);
         }else{
             (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput(tokens, amount);
-            outputAmount = outputAmount * 1 ether * 98 / (100 * slcValue);
+            outputAmount = outputAmount * 1 ether * 99 / (100 * slcValue);
         }
     }
 
@@ -246,7 +248,7 @@ contract slcVaults  {
         tokens[1] = TokenAddr;
 
         (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput(tokens, amount);
-        outputAmount = outputAmount * 95 / 100;
+        outputAmount = outputAmount * 96 / 100;
     }
     function slcTokenBuyEstimateIn(address TokenAddr, uint amount) public view returns(uint inputAmount){
         // outputAmount = ixInterface(xInterface).xExchangeEstimateInput(address[] memory tokens,uint amountIn);
@@ -258,8 +260,8 @@ contract slcVaults  {
         if(tokens[0] == tokens[2]){
             inputAmount = amount * 1 ether * 100 / (99 * slcValue);
         }else{
-            (inputAmount,) = ixInterface(xInterface).xExchangeEstimateOutput(tokens, amount * 1 ether * 100 / (98 * slcValue));
-            // inputAmount = inputAmount * 1 ether * 98 / (100 * slcValue);
+            (inputAmount,) = ixInterface(xInterface).xExchangeEstimateOutput(tokens, amount * 1 ether * 100 / (99 * slcValue));
+            // inputAmount = inputAmount * 1 ether * 99 / (100 * slcValue);
         }
     }
 
@@ -270,8 +272,8 @@ contract slcVaults  {
         tokens[0] = superLibraCoin;
         tokens[1] = TokenAddr;
 
-        (inputAmount,) = ixInterface(xInterface).xExchangeEstimateOutput(tokens, amount * 100 / 95);
-        // outputAmount = outputAmount * 95 / 100;
+        (inputAmount,) = ixInterface(xInterface).xExchangeEstimateOutput(tokens, amount * 100 / 96);
+        // outputAmount = outputAmount * 96 / 100;
     }
     //---------------------------- Mint&Burn Function--------------------------------
     // Use licensedAssets to mint SLC
@@ -288,7 +290,7 @@ contract slcVaults  {
             outputAmount = amount * 1 ether * 99 / (100 * slcValue);
         }else{
             outputAmount = ixInterface(xInterface).xexchange(tokens,amount,outputAmount,outputAmount / 100, block.timestamp + 100);
-            outputAmount = outputAmount * 1 ether * 98 / (100 * slcValue);
+            outputAmount = outputAmount * 1 ether * 99 / (100 * slcValue);
         }
 
         iSlc(superLibraCoin).mintSLC(msg.sender,outputAmount);
@@ -310,7 +312,7 @@ contract slcVaults  {
         tokens[0] = superLibraCoin;
         tokens[1] = TokenAddr;
         (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput(tokens, amount);
-        outputAmount = outputAmount * 95 / 100 ;
+        outputAmount = outputAmount * 96 / 100 ;
 
         address[] memory tokensT = new address[](3);
         tokensT[0] = mainCollateralToken;
@@ -370,8 +372,11 @@ contract slcVaults  {
     function obtainSLC(uint amount, address user) public  {
         if(slcInterface[msg.sender]==false){
             require(user == msg.sender,"SLC Vaults: Not registered as slcInterface or user need be msg.sender!");
+            require(latestBlockNumber < block.number,"SLC Vaults: Same block can only have ONE obtain operation ");
         }
         require(amount > 0,"SLC Vaults: Cant Pledge 0 amount");
+
+        latestBlockNumber = block.number;
         uint factor;
         iSlc(superLibraCoin).mintSLC(msg.sender,amount);
         userObtainedSLCAmount[user] += amount;

@@ -13,6 +13,8 @@ contract slcInterface  {
     address public setter;
     address newsetter;
 
+    mapping(address => uint) public  UserLatestBlockNumber;//User can only have ONE obtain in one block
+
     // struct licensedAsset{
     //     address  assetAddr;
     //     // loan-to-value (LTV) ratio is a measurement lenders use to compare your loan amount for a home against the value of that property
@@ -25,7 +27,7 @@ contract slcInterface  {
     // }
     //----------------------------modifier ----------------------------
     modifier onlySetter() {
-        require(msg.sender == setter, 'SLC Vaults: Only Manager Use');
+        require(msg.sender == setter, 'SLC Interface: Only Manager Use');
         _;
     }
 
@@ -38,7 +40,7 @@ contract slcInterface  {
         newsetter = _set;
     }
     function acceptSetter(bool _TorF) external {
-        require(msg.sender == newsetter, 'SLC Vaults: Permission FORBIDDEN');
+        require(msg.sender == newsetter, 'SLC Interface: Permission FORBIDDEN');
         if(_TorF){
             setter = newsetter;
         }
@@ -180,6 +182,8 @@ contract slcInterface  {
     }
     // obtain SLC coin
     function obtainSLC(uint amount) public {
+        require(UserLatestBlockNumber[msg.sender] < block.number,"SLC Interface: Same block can only have ONE obtain operation");
+        UserLatestBlockNumber[msg.sender] = block.number;
         iSlcVaults(slcVaults).obtainSLC(amount, msg.sender);
         IERC20(superLibraCoin).transfer(msg.sender,amount);
     }
