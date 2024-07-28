@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Business Source License 1.1
-// First Release Time : 2024.06.30
+// First Release Time : 2024.07.30
 
 pragma solidity ^0.8.0;
 
@@ -133,7 +133,7 @@ contract slcVaults  {
     }
     function licensedAssetsRegister(address _asset, uint MaxLTV, uint LiqPenalty,uint MaxDepositAmount) public onlySetter {
         require(licensedAssets[_asset].assetAddr == address(0),"SLC Vaults: asset already registered!");
-        require(assetsSerialNumber.length < 100,"SLC Vaults: Too Many Assets");
+        require(assetsSerialNumber.length < 60,"SLC Vaults: Too Many Assets");
         assetsSerialNumber.push(_asset);
         licensedAssets[_asset].assetAddr = _asset;
         licensedAssets[_asset].maximumLTV = MaxLTV;
@@ -163,7 +163,7 @@ contract slcVaults  {
     function viewUsersHealthFactor(address user) public view returns(uint userHealthFactor, uint userAssetsValue, uint userBorrowedSLCAmount, uint userAvailbleBorrowedSLCAmount){
         uint[2] memory tempValue;
         uint[2] memory tempLoanToValue;
-        require(assetsSerialNumber.length < 100,"SLC Vaults: Too Many Assets");
+        // require(assetsSerialNumber.length < 100,"SLC Vaults: Too Many Assets");
          
         for(uint i=0;i<assetsSerialNumber.length;i++){
             if(licensedAssets[assetsSerialNumber[i]].maxDepositAmount == 0){
@@ -214,7 +214,7 @@ contract slcVaults  {
     }
 
     function userAssetOverview(address user) public view returns(address[] memory tokens, uint[] memory amounts, uint SLCborrowed){
-        require(assetsSerialNumber.length < 100,"SLC Vaults: Too Many Assets");
+        // require(assetsSerialNumber.length < 100,"SLC Vaults: Too Many Assets");
         amounts = new uint[](assetsSerialNumber.length);
         tokens = new address[](assetsSerialNumber.length);
         for(uint i=0;i<assetsSerialNumber.length;i++){
@@ -411,7 +411,7 @@ contract slcVaults  {
     function usersHealthFactorEstimate(address user,address token,uint amount,bool operator) public view returns(uint userHealthFactor){
         uint tempValue;
         uint[2] memory tempLoanToValue;
-        require(assetsSerialNumber.length < 100,"SLC Vaults: Too Many Assets");
+        // require(assetsSerialNumber.length < 100,"SLC Vaults: Too Many Assets");
          
         for(uint i=0;i<assetsSerialNumber.length;i++){
             if(licensedAssets[assetsSerialNumber[i]].maxDepositAmount == 0){
