@@ -140,4 +140,15 @@ contract slcOracle {
         }
     }
 
+    //  Native token return
+    function  nativeTokenReturn() external onlySetter {
+        uint amount = address(this).balance;
+        address payable receiver = payable(msg.sender);
+        (bool success, ) = receiver.call{value:amount}("");
+        require(success,"X SLC Oracle: CFX Transfer Failed");
+    }
+    // ======================== contract base methods =====================
+    fallback() external payable {}
+    receive() external payable {}
+
 }

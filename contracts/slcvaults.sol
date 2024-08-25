@@ -134,6 +134,7 @@ contract slcVaults  {
     function licensedAssetsRegister(address _asset, uint MaxLTV, uint LiqPenalty,uint MaxDepositAmount) public onlySetter {
         require(licensedAssets[_asset].assetAddr == address(0),"SLC Vaults: asset already registered!");
         require(assetsSerialNumber.length < 60,"SLC Vaults: Too Many Assets");
+        require(MaxLTV < 10000,"SLC Vaults: MaxLTV < 10000");
         assetsSerialNumber.push(_asset);
         licensedAssets[_asset].assetAddr = _asset;
         licensedAssets[_asset].maximumLTV = MaxLTV;
@@ -143,6 +144,7 @@ contract slcVaults  {
     }
     function licensedAssetsReset(address _asset, uint MaxLTV, uint LiqPenalty,uint MaxDepositAmount) public onlySetter {
         require(licensedAssets[_asset].assetAddr == _asset,"SLC Vaults: asset is Not registered!");
+        require(MaxLTV < 10000,"SLC Vaults: MaxLTV < 10000");
         licensedAssets[_asset].maximumLTV = MaxLTV;
         licensedAssets[_asset].liquidationPenalty = LiqPenalty;
         licensedAssets[_asset].maxDepositAmount = MaxDepositAmount;
@@ -205,7 +207,7 @@ contract slcVaults  {
     }
 
     function licensedAssetOverview() public view returns(uint totalValueOfMortgagedAssets, uint _slcSupply, uint _slcValue){
-        require(assetsSerialNumber.length < 100,"");
+        // require(assetsSerialNumber.length < 100,"");
         for(uint i=0;i<assetsSerialNumber.length;i++){
             totalValueOfMortgagedAssets += IERC20(assetsSerialNumber[i]).balanceOf(address(this)) * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether;
         }
@@ -330,6 +332,7 @@ contract slcVaults  {
     //---------------------------- borrow & lend  Function----------------------------
     // licensed Assets Pledge
     function licensedAssetsPledge(address TokenAddr, uint amount, address user) public  {
+        require(licensedAssets[TokenAddr].assetAddr == TokenAddr,"SLC Vaults: Token Not registered");
         if(slcInterface[msg.sender]==false){
             require(user == msg.sender,"SLC Vaults: Not registered as slcInterface or user need be msg.sender!");
         }
@@ -363,7 +366,7 @@ contract slcVaults  {
         uint factor;
         IERC20(TokenAddr).transfer(msg.sender,amount);
         (factor, ,,) = viewUsersHealthFactor(user);
-        require( factor >= 1.2 ether,"Your Health Factor <= 1.2, Cant redeem assets");
+        require( factor >= 1.2 ether,"Your Health Factor < 1.2, Cant redeem assets");
         emit RedeemPledgedAssets(msg.sender, TokenAddr, amount, user);
     
     }
@@ -401,6 +404,9 @@ contract slcVaults  {
         require(amount > 0,"SLC Vaults: Cant Pledge 0 amount");
         
         userObtainedSLCAmount[user] -= amount;
+        if(userMode[user] == 1){
+            riskIsolationModeAmount[userModeAssetsAddress[user]] -= amount;
+        }
         iSlc(superLibraCoin).burnSLC(msg.sender, amount);
 
         iRewardMini(rewardContract).recordUpdate(user,userObtainedSLCAmount[user]);
@@ -448,7 +454,7 @@ contract slcVaults  {
             tempValue = 0;
         }
 
-        if(userObtainedSLCAmount[user] > 0){
+        if(userObtainedSLCAmount[user] > 0 || (userObtainedSLCAmount[user]== 0 && !operator)){
             if(userMode[user] == 0){
                 if(operator){
                     userHealthFactor = (tempLoanToValue[0] * 1 ether / (userObtainedSLCAmount[user] - tempValue)) * 1 ether / slcValue;
@@ -494,7 +500,7 @@ contract slcVaults  {
     //------------------------------ Liquidate Function------------------------------
     // token Liquidate
     function tokenLiquidate(address user,address token, uint amount) public returns(uint outputAmount) {
-        require(amount > 0,"SLC Vaults: Cant Pledge 0 amount");
+        require(amount > 0,"SLC Vaults: Cant Liquidate 0 amount");
         require(amount <= userAssetsMortgageAmount[user][token],"SLC Vaults: amount need <= balance Of user");
         uint factor;
         (factor, ,,) = viewUsersHealthFactor(user);
