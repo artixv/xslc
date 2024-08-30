@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: Business Source License 1.1
 // First Release Time : 2024.07.30
 
-pragma solidity ^0.8.0;
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+pragma solidity 0.8.6;
+// import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/islcvaults.sol";
 import "./interfaces/iwxcfx.sol";
 contract slcInterface  {
+    using SafeERC20 for IERC20;
+
     address public superLibraCoin;
     address public slcVaults;
     address public wxCFX;
@@ -131,54 +134,54 @@ contract slcInterface  {
         userHealthFactor = (userHealthFactor <= 1000 ether ? userHealthFactor : 1000 ether);
     }
     
-    function slcTokenBuyEstimateOut(address TokenAddr, uint amount) external view returns(uint outputAmount){
-        return iSlcVaults(slcVaults).slcTokenBuyEstimateOut( TokenAddr, amount);
+    function slcTokenBuyEstimateOut(address tokenAddr, uint amount) external view returns(uint outputAmount){
+        return iSlcVaults(slcVaults).slcTokenBuyEstimateOut( tokenAddr, amount);
     }
-    function slcTokenSellEstimateOut(address TokenAddr, uint amount) external view returns(uint outputAmount){
-        return iSlcVaults(slcVaults).slcTokenSellEstimateOut( TokenAddr, amount);
+    function slcTokenSellEstimateOut(address tokenAddr, uint amount) external view returns(uint outputAmount){
+        return iSlcVaults(slcVaults).slcTokenSellEstimateOut( tokenAddr, amount);
     }
-    function slcTokenBuyEstimateIn(address TokenAddr, uint amount) external view returns(uint inputAmount){
-        return iSlcVaults(slcVaults).slcTokenBuyEstimateIn( TokenAddr, amount);
+    function slcTokenBuyEstimateIn(address tokenAddr, uint amount) external view returns(uint inputAmount){
+        return iSlcVaults(slcVaults).slcTokenBuyEstimateIn( tokenAddr, amount);
     }
-    function slcTokenSellEstimateIn(address TokenAddr, uint amount) external view returns(uint inputAmount){
-        return iSlcVaults(slcVaults).slcTokenSellEstimateIn( TokenAddr, amount);
+    function slcTokenSellEstimateIn(address tokenAddr, uint amount) external view returns(uint inputAmount){
+        return iSlcVaults(slcVaults).slcTokenSellEstimateIn( tokenAddr, amount);
     }
 
-    function slcTokenBuy(address TokenAddr, uint amount) public  returns(uint outputAmount){
-        IERC20(TokenAddr).transferFrom(msg.sender,address(this),amount);
-        IERC20(TokenAddr).approve(slcVaults, amount);
-        outputAmount = iSlcVaults(slcVaults).slcTokenBuy( TokenAddr, amount);
+    function slcTokenBuy(address tokenAddr, uint amount) public  returns(uint outputAmount){
+        IERC20(tokenAddr).transferFrom(msg.sender,address(this),amount);
+        IERC20(tokenAddr).approve(slcVaults, amount);
+        outputAmount = iSlcVaults(slcVaults).slcTokenBuy( tokenAddr, amount);
 
         if(IERC20(superLibraCoin).balanceOf(address(this))>0){
             IERC20(superLibraCoin).transfer(msg.sender,IERC20(superLibraCoin).balanceOf(address(this)));
         }
-        if(IERC20(TokenAddr).balanceOf(address(this))>0){
-            IERC20(TokenAddr).transfer(msg.sender,IERC20(TokenAddr).balanceOf(address(this)));
+        if(IERC20(tokenAddr).balanceOf(address(this))>0){
+            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
         }
     }
-    function slcTokenSell(address TokenAddr, uint amount) public  returns(uint outputAmount){
+    function slcTokenSell(address tokenAddr, uint amount) public  returns(uint outputAmount){
         IERC20(superLibraCoin).transferFrom(msg.sender,address(this),amount);
         IERC20(superLibraCoin).approve(slcVaults, amount);
-        outputAmount = iSlcVaults(slcVaults).slcTokenSell( TokenAddr, amount);
+        outputAmount = iSlcVaults(slcVaults).slcTokenSell( tokenAddr, amount);
 
         if(IERC20(superLibraCoin).balanceOf(address(this))>0){
             IERC20(superLibraCoin).transfer(msg.sender,IERC20(superLibraCoin).balanceOf(address(this)));
         }
-        if(IERC20(TokenAddr).balanceOf(address(this))>0){
-            IERC20(TokenAddr).transfer(msg.sender,IERC20(TokenAddr).balanceOf(address(this)));
+        if(IERC20(tokenAddr).balanceOf(address(this))>0){
+            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
         }
     }
     //---------------------------- borrow & lend  Function----------------------------
     // licensed Assets Pledge
-    function licensedAssetsPledge(address TokenAddr, uint amount) public {
-        IERC20(TokenAddr).transferFrom(msg.sender,address(this),amount);
-        IERC20(TokenAddr).approve(slcVaults, amount);
-        iSlcVaults(slcVaults).licensedAssetsPledge( TokenAddr, amount, msg.sender);
+    function licensedAssetsPledge(address tokenAddr, uint amount) public {
+        IERC20(tokenAddr).transferFrom(msg.sender,address(this),amount);
+        IERC20(tokenAddr).approve(slcVaults, amount);
+        iSlcVaults(slcVaults).licensedAssetsPledge( tokenAddr, amount, msg.sender);
     }
     // redeem Pledged Assets
-    function redeemPledgedAssets(address TokenAddr, uint amount) public {
-        iSlcVaults(slcVaults).redeemPledgedAssets( TokenAddr, amount, msg.sender);
-        IERC20(TokenAddr).transfer(msg.sender,IERC20(TokenAddr).balanceOf(address(this)));
+    function redeemPledgedAssets(address tokenAddr, uint amount) public {
+        iSlcVaults(slcVaults).redeemPledgedAssets( tokenAddr, amount, msg.sender);
+        IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
     }
     // obtain SLC coin
     function obtainSLC(uint amount) public {

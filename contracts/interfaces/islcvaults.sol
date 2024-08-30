@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Business Source License 1.1
 // First Release Time : 2024.07.30
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.6;
 interface iSlcVaults{
     struct licensedAsset{
         address  assetAddr;
@@ -41,18 +41,18 @@ interface iSlcVaults{
                              address _userModeAssetsAddress,
                              address user) external;
     //---------------------------- User Used Function--------------------------------
-    function slcTokenBuyEstimateOut(address TokenAddr, uint amount) external view returns(uint outputAmount);
-    function slcTokenSellEstimateOut(address TokenAddr, uint amount) external view returns(uint outputAmount);
-    function slcTokenBuyEstimateIn(address TokenAddr, uint amount) external view returns(uint inputAmount);
-    function slcTokenSellEstimateIn(address TokenAddr, uint amount) external view returns(uint inputAmount);
+    function slcTokenBuyEstimateOut(address tokenAddr, uint amount) external view returns(uint outputAmount);
+    function slcTokenSellEstimateOut(address tokenAddr, uint amount) external view returns(uint outputAmount);
+    function slcTokenBuyEstimateIn(address tokenAddr, uint amount) external view returns(uint inputAmount);
+    function slcTokenSellEstimateIn(address tokenAddr, uint amount) external view returns(uint inputAmount);
 
-    function slcTokenBuy(address TokenAddr, uint amount) external  returns(uint outputAmount);
-    function slcTokenSell(address TokenAddr, uint amount) external  returns(uint outputAmount);
+    function slcTokenBuy(address tokenAddr, uint amount) external  returns(uint outputAmount);
+    function slcTokenSell(address tokenAddr, uint amount) external  returns(uint outputAmount);
     //---------------------------- borrow & lend  Function----------------------------
     // licensed Assets Pledge
-    function licensedAssetsPledge(address TokenAddr, uint amount, address user) external ;
+    function licensedAssetsPledge(address tokenAddr, uint amount, address user) external ;
     // redeem Pledged Assets
-    function redeemPledgedAssets(address TokenAddr, uint amount, address user) external ;
+    function redeemPledgedAssets(address tokenAddr, uint amount, address user) external ;
     // obtain SLC coin
     function obtainSLC(uint amount, address user) external ;
     // return SLC coin

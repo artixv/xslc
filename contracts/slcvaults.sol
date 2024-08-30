@@ -1,15 +1,19 @@
 // SPDX-License-Identifier: Business Source License 1.1
 // First Release Time : 2024.07.30
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.6;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+// import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/ixinterface.sol";
 import "./interfaces/islc.sol";
 import "./interfaces/islcoracle.sol";
 import "./interfaces/iRewardMini.sol";
+import "./interfaces/iDecimals.sol";
 
 contract slcVaults  {
+    using SafeERC20 for IERC20;
+
     address public superLibraCoin;
     uint    public slcValue;
     uint    public slcUnsecuredIssuancesAmount;
@@ -68,10 +72,10 @@ contract slcVaults  {
     event LicensedAssetsSetting(address indexed asset, uint MaxLTV, uint LiqPenalty,uint MaxDepositAmount);
     event UserModeSetting(address indexed msgSender, uint8 _mode,address _userModeAssetsAddress);
     event SlcInterfaceSetup(address indexed _interface, bool _ToF);
-    event SlcTokenBuy(address indexed buyer,address TokenAddr, uint amount,uint outputAmount);
-    event SlcTokenSell(address indexed seller,address TokenAddr, uint amount, uint outputAmount);
-    event LicensedAssetsPledge(address indexed msgSender, address TokenAddr, uint amount, address user);
-    event RedeemPledgedAssets(address indexed msgSender, address TokenAddr, uint amount, address user);
+    event SlcTokenBuy(address indexed buyer,address tokenAddr, uint amount,uint outputAmount);
+    event SlcTokenSell(address indexed seller,address tokenAddr, uint amount, uint outputAmount);
+    event LicensedAssetsPledge(address indexed msgSender, address tokenAddr, uint amount, address user);
+    event RedeemPledgedAssets(address indexed msgSender, address tokenAddr, uint amount, address user);
     event ObtainSLC(address indexed msgSender, uint amount, address user) ;
     event ReturnSLC(address indexed msgSender, uint amount, address user) ;
 
@@ -216,7 +220,7 @@ contract slcVaults  {
     }
 
     function userAssetOverview(address user) public view returns(address[] memory tokens, uint[] memory amounts, uint SLCborrowed){
-        // require(assetsSerialNumber.length < 100,"SLC Vaults: Too Many Assets");
+
         amounts = new uint[](assetsSerialNumber.length);
         tokens = new address[](assetsSerialNumber.length);
         for(uint i=0;i<assetsSerialNumber.length;i++){
@@ -227,69 +231,72 @@ contract slcVaults  {
     }
     
     //---------------------------- User Used Function--------------------------------
-    function slcTokenBuyEstimateOut(address TokenAddr, uint amount) public view returns(uint outputAmount){
-        // outputAmount = ixInterface(xInterface).xExchangeEstimateInput(address[] memory tokens,uint amountIn);
+    function slcTokenBuyEstimateOut(address tokenAddr, uint amount) public view returns(uint outputAmount){
+        uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
+
         address[] memory tokens = new address[](3);
 
-        tokens[0] = TokenAddr;
+        tokens[0] = tokenAddr;
         tokens[1] = superLibraCoin;
         tokens[2] = mainCollateralToken;
         if(tokens[0] == tokens[2]){
-            outputAmount = amount * 1 ether * 99 / (100 * slcValue);
+            outputAmount = amountNormalize * 1 ether * 99 / (100 * slcValue);
         }else{
-            (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput(tokens, amount);
+            (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput(tokens, amountNormalize);
             outputAmount = outputAmount * 1 ether * 99 / (100 * slcValue);
         }
     }
 
-    function slcTokenSellEstimateOut(address TokenAddr, uint amount) public view returns(uint outputAmount){
-        // outputAmount = ixInterface(xInterface).swapCalculation2(_lp, slc, amount);
+    function slcTokenSellEstimateOut(address tokenAddr, uint amount) public view returns(uint outputAmount){
+        uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
+
         address[] memory tokens = new address[](2);
 
         tokens[0] = superLibraCoin;
-        tokens[1] = TokenAddr;
+        tokens[1] = tokenAddr;
 
-        (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput(tokens, amount);
+        (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput(tokens, amountNormalize);
         outputAmount = outputAmount * 96 / 100;
     }
-    function slcTokenBuyEstimateIn(address TokenAddr, uint amount) public view returns(uint inputAmount){
-        // outputAmount = ixInterface(xInterface).xExchangeEstimateInput(address[] memory tokens,uint amountIn);
+    function slcTokenBuyEstimateIn(address tokenAddr, uint amount) public view returns(uint inputAmount){
+        uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
+
         address[] memory tokens = new address[](3);
 
-        tokens[0] = TokenAddr;
+        tokens[0] = tokenAddr;
         tokens[1] = superLibraCoin;
         tokens[2] = mainCollateralToken;
         if(tokens[0] == tokens[2]){
-            inputAmount = amount * 1 ether * 100 / (99 * slcValue);
+            inputAmount = amountNormalize * 1 ether * 100 / (99 * slcValue);
         }else{
-            (inputAmount,) = ixInterface(xInterface).xExchangeEstimateOutput(tokens, amount * 1 ether * 100 / (99 * slcValue));
-            // inputAmount = inputAmount * 1 ether * 99 / (100 * slcValue);
+            (inputAmount,) = ixInterface(xInterface).xExchangeEstimateOutput(tokens, amountNormalize * 1 ether * 100 / (99 * slcValue));
         }
     }
 
-    function slcTokenSellEstimateIn(address TokenAddr, uint amount) public view returns(uint inputAmount){
-        // outputAmount = ixInterface(xInterface).swapCalculation2(_lp, slc, amount);
+    function slcTokenSellEstimateIn(address tokenAddr, uint amount) public view returns(uint inputAmount){
+
+        uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
         address[] memory tokens = new address[](2);
 
         tokens[0] = superLibraCoin;
-        tokens[1] = TokenAddr;
+        tokens[1] = tokenAddr;
 
-        (inputAmount,) = ixInterface(xInterface).xExchangeEstimateOutput(tokens, amount * 100 / 96);
-        // outputAmount = outputAmount * 96 / 100;
+        (inputAmount,) = ixInterface(xInterface).xExchangeEstimateOutput(tokens, amountNormalize * 100 / 96);
     }
     //---------------------------- Mint&Burn Function--------------------------------
     // Use licensedAssets to mint SLC
-    function slcTokenBuy(address TokenAddr, uint amount) public returns(uint outputAmount){
+    function slcTokenBuy(address tokenAddr, uint amount) public returns(uint outputAmount){
+        uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
         address[] memory tokens = new address[](3);
-        tokens[0] = TokenAddr;
+        tokens[0] = tokenAddr;
         tokens[1] = superLibraCoin;
         tokens[2] = mainCollateralToken;
         (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput(tokens, amount);
-        IERC20(TokenAddr).transferFrom(msg.sender,address(this),amount);
-        IERC20(TokenAddr).approve(xInterface, amount);
+        IERC20(tokenAddr).transferFrom(msg.sender,address(this),amount);
+        IERC20(tokenAddr).approve(xInterface, amount);
         
         if(tokens[0] == tokens[2]){
-            outputAmount = amount * 1 ether * 99 / (100 * slcValue);
+            outputAmount = amountNormalize * 1 ether * 99 / (100 * slcValue);
         }else{
             outputAmount = ixInterface(xInterface).xexchange(tokens,amount,outputAmount,outputAmount / 100, block.timestamp + 100);
             outputAmount = outputAmount * 1 ether * 99 / (100 * slcValue);
@@ -297,12 +304,12 @@ contract slcVaults  {
 
         iSlc(superLibraCoin).mintSLC(msg.sender,outputAmount);
         slcUnsecuredIssuancesAmount += outputAmount;
-        emit SlcTokenBuy(msg.sender, TokenAddr, amount, outputAmount);
+        emit SlcTokenBuy(msg.sender, tokenAddr, amount, outputAmount);
     
     }
 
     // Get back 95% of values in SLC
-    function slcTokenSell(address TokenAddr, uint amount) public  returns(uint outputAmount) {
+    function slcTokenSell(address tokenAddr, uint amount) public  returns(uint outputAmount) {
         iSlc(superLibraCoin).burnSLC(msg.sender,amount);
         if(slcUnsecuredIssuancesAmount > amount){
             slcUnsecuredIssuancesAmount -= amount;
@@ -312,45 +319,47 @@ contract slcVaults  {
 
         address[] memory tokens = new address[](2);
         tokens[0] = superLibraCoin;
-        tokens[1] = TokenAddr;
+        tokens[1] = tokenAddr;
         (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput(tokens, amount);
         outputAmount = outputAmount * 96 / 100 ;
 
         address[] memory tokensT = new address[](3);
         tokensT[0] = mainCollateralToken;
         tokensT[1] = superLibraCoin;
-        tokensT[2] = TokenAddr;
+        tokensT[2] = tokenAddr;
         (amount,) = ixInterface(xInterface).xExchangeEstimateOutput(tokensT, outputAmount);
 
         IERC20(mainCollateralToken).approve(xInterface, amount);
         outputAmount = ixInterface(xInterface).xexchange(tokensT,amount,outputAmount,outputAmount / 50, block.timestamp + 100);
-        IERC20(TokenAddr).transfer(msg.sender,outputAmount);
-        emit SlcTokenSell(msg.sender, TokenAddr, amount, outputAmount);
+        IERC20(tokenAddr).transfer(msg.sender,outputAmount);
+        emit SlcTokenSell(msg.sender, tokenAddr, amount, outputAmount);
     
     }
 
     //---------------------------- borrow & lend  Function----------------------------
     // licensed Assets Pledge
-    function licensedAssetsPledge(address TokenAddr, uint amount, address user) public  {
-        require(licensedAssets[TokenAddr].assetAddr == TokenAddr,"SLC Vaults: Token Not registered");
+    function licensedAssetsPledge(address tokenAddr, uint amount, address user) public  {
+        uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
+        require(licensedAssets[tokenAddr].assetAddr == tokenAddr,"SLC Vaults: Token Not registered");
         if(slcInterface[msg.sender]==false){
             require(user == msg.sender,"SLC Vaults: Not registered as slcInterface or user need be msg.sender!");
         }
         require(amount > 0,"SLC Vaults: Cant Pledge 0 amount");
 
-        if(licensedAssets[TokenAddr].maxDepositAmount == 0){ 
+        if(licensedAssets[tokenAddr].maxDepositAmount == 0){ 
             require(userMode[user] == 0,"SLC Vaults: Wrong Mode, Need a  Popular Mode");
         }else{
-            require((TokenAddr == userModeAssetsAddress[user]) && (userMode[user] == 1),"SLC Vaults: Wrong Mode, Need a  Non-Popular Mode");
+            require((tokenAddr == userModeAssetsAddress[user]) && (userMode[user] == 1),"SLC Vaults: Wrong Mode, Need a  Non-Popular Mode");
         }
-        IERC20(TokenAddr).transferFrom(msg.sender,address(this),amount);
-        userAssetsMortgageAmount[user][TokenAddr] += amount;
-        userAssetsMortgageAmountSum[TokenAddr] += amount;
-        emit LicensedAssetsPledge(msg.sender, TokenAddr, amount, user);
+        IERC20(tokenAddr).transferFrom(msg.sender,address(this),amount);
+        userAssetsMortgageAmount[user][tokenAddr] += amountNormalize;
+        userAssetsMortgageAmountSum[tokenAddr] += amountNormalize;
+        emit LicensedAssetsPledge(msg.sender, tokenAddr, amount, user);
     }
 
     // redeem Pledged Assets
-    function redeemPledgedAssets(address TokenAddr, uint amount, address user) public  {
+    function redeemPledgedAssets(address tokenAddr, uint amount, address user) public  {
+        uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
         if(slcInterface[msg.sender]==false){
             require(user == msg.sender,"SLC Vaults: Not registered as slcInterface or user need be msg.sender!");
         }
@@ -361,13 +370,13 @@ contract slcVaults  {
         }else{
             require((TokenAddr == userModeAssetsAddress[user]) && (userMode[user] == 1),"SLC Vaults: Wrong Mode, Need a  Non-Popular Mode");
         }*/
-        userAssetsMortgageAmount[user][TokenAddr] -= amount;
-        userAssetsMortgageAmountSum[TokenAddr] -= amount;
+        userAssetsMortgageAmount[user][tokenAddr] -= amountNormalize;
+        userAssetsMortgageAmountSum[tokenAddr] -= amountNormalize;
         uint factor;
-        IERC20(TokenAddr).transfer(msg.sender,amount);
+        IERC20(tokenAddr).transfer(msg.sender,amount);
         (factor, ,,) = viewUsersHealthFactor(user);
         require( factor >= 1.2 ether,"Your Health Factor < 1.2, Cant redeem assets");
-        emit RedeemPledgedAssets(msg.sender, TokenAddr, amount, user);
+        emit RedeemPledgedAssets(msg.sender, tokenAddr, amount, user);
     
     }
 
@@ -417,12 +426,13 @@ contract slcVaults  {
     function usersHealthFactorEstimate(address user,address token,uint amount,bool operator) public view returns(uint userHealthFactor){
         uint tempValue;
         uint[2] memory tempLoanToValue;
+        uint amountNormalize = amount * 1 ether / iDecimals(token).decimals();
         // require(assetsSerialNumber.length < 100,"SLC Vaults: Too Many Assets");
          
         for(uint i=0;i<assetsSerialNumber.length;i++){
             if(licensedAssets[assetsSerialNumber[i]].maxDepositAmount == 0){
                 if(token == assetsSerialNumber[i]){
-                    tempValue = amount;
+                    tempValue = amountNormalize;
                 }else{
                     tempValue = 0;
                 }
@@ -435,7 +445,7 @@ contract slcVaults  {
                 }
             }else if(userModeAssetsAddress[user] == assetsSerialNumber[i]){
                 if(token == assetsSerialNumber[i]){
-                    tempValue = amount;
+                    tempValue = amountNormalize;
                 }else{
                     tempValue = 0;
                 }
@@ -485,35 +495,38 @@ contract slcVaults  {
     }
     // Assets excess Disposal
     function excessDisposal(address token, uint amount) public onlyRebalancer(){
-        require(IERC20(token).balanceOf(address(this)) > amount + userAssetsMortgageAmountSum[token],"SLC Vaults: Cant Do Excess Disposal, asset not enough!");
+        uint amountNormalize = amount * 1 ether / iDecimals(token).decimals();
+        require(IERC20(token).balanceOf(address(this)) > amountNormalize + userAssetsMortgageAmountSum[token],"SLC Vaults: Cant Do Excess Disposal, asset not enough!");
         IERC20(token).transfer(msg.sender,amount);
-        licensedAssets[token].mortgagedAmountDisposed += amount;
+        licensedAssets[token].mortgagedAmountDisposed += amountNormalize;
         emit MortgagedAmountDisposed(token, amount);
     
     }
     function excessAssetsReturn(address token, uint amount) public onlyRebalancer(){
+        uint amountNormalize = amount * 1 ether / iDecimals(token).decimals();
         IERC20(token).transfer(msg.sender,amount);
-        licensedAssets[token].mortgagedAmountReturned += amount;
+        licensedAssets[token].mortgagedAmountReturned += amountNormalize;
         emit MortgagedAmountReturned(token, amount);
     }
 
     //------------------------------ Liquidate Function------------------------------
     // token Liquidate
     function tokenLiquidate(address user,address token, uint amount) public returns(uint outputAmount) {
+        uint amountNormalize = amount * 1 ether / iDecimals(token).decimals();
         require(amount > 0,"SLC Vaults: Cant Liquidate 0 amount");
-        require(amount <= userAssetsMortgageAmount[user][token],"SLC Vaults: amount need <= balance Of user");
+        require(amountNormalize <= userAssetsMortgageAmount[user][token],"SLC Vaults: amount need <= balance Of user");
         uint factor;
         (factor, ,,) = viewUsersHealthFactor(user);
         require(factor < 1 ether,"SLC Vaults: Liquidate user Assets, his Health Factor must < 1");
         address[] memory tokens = new address[](3);
-
+        
         tokens[0] = token;
         tokens[1] = superLibraCoin;
         tokens[2] = mainCollateralToken;
         IERC20(token).approve(xInterface, amount);
         
         if(tokens[0] == mainCollateralToken){
-            outputAmount = amount * 1 ether * (10000-licensedAssets[token].liquidationPenalty) / (10000 * slcValue);
+            outputAmount = amountNormalize * 1 ether * (10000-licensedAssets[token].liquidationPenalty) / (10000 * slcValue);
         }else{
             (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput(tokens, amount);
             outputAmount = ixInterface(xInterface).xexchange(tokens, amount, outputAmount, outputAmount / 100, block.timestamp + 100);
@@ -522,10 +535,10 @@ contract slcVaults  {
         require(userObtainedSLCAmount[user] >= outputAmount,"");
         slcUnsecuredIssuancesAmount += outputAmount;
         userObtainedSLCAmount[user] -= outputAmount;
-        userAssetsMortgageAmountSum[token] -= amount;
-        userAssetsMortgageAmount[user][token] -= amount;
+        userAssetsMortgageAmountSum[token] -= amountNormalize;
+        userAssetsMortgageAmount[user][token] -= amountNormalize;
 
-        IERC20(token).transfer(msg.sender,amount/10000);
+        IERC20(token).transfer(msg.sender,amountNormalize/10000);
         emit TokenLiquidate(msg.sender, token, amount, outputAmount);
     }
     function tokenLiquidateEstimate(address user,address token) public view returns(uint maxAmount){

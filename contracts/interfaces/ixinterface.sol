@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Business Source License 1.1
 // First Release Time : 2024.07.30
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.6;
+
 interface ixInterface{
     // factory
     function createPair(address tokenA,address tokenB) external returns (address) ;
@@ -19,15 +20,7 @@ interface ixInterface{
     // Query function
     // Overall parameter query
     // Including 8 aspects:
-    // 1 查询目前有多少币对；
-    // 2 查询两个币种对应的币对是否存在，存在的话地址是多少；
-    // 3 查询某个地址的币对是哪两个币种
-    // 4 查询某个币种是否创建了稳定币币对
-    // 5 查询某个币种的创建者是哪个地址
-    // 6 查询某个币种初始创建的lp数量
-    // 7 获取某一币对的详情
-    // 8 获取某一币对现在的参数设置
-    // 9 获取某一币对目前给定数量获得的兑换数量
+
     // factory
     function getPair(address tokenA, address tokenB) external view returns (address pair) ;
     function getCoinToStableLpPair(address tokenA) external view returns (address pair) ;
@@ -48,8 +41,6 @@ interface ixInterface{
 
 
     // Personal parameter query
-    // 1 查询用户持有某一币种或某一lp的数量 
-    // 2 查询用户持有某lp相应两种reserve的数量
 
     function getUserCoinOrLpAmount(address lpOrCoin,address _user) external view returns (uint);
 
