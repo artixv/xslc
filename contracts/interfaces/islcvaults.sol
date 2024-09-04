@@ -35,6 +35,9 @@ interface iSlcVaults{
                                        bool operator) external view returns(uint userHealthFactor);
     function userMode(address user) external view returns(uint8);
     function userModeAssetsAddress(address user) external view returns(address);
+
+    function latestBlockNumber() external view returns(uint);
+    function latestBlockUser() external view returns(address);
  
     //-------------------------------mode setting------------------------------------
     function userModeSetting(uint8 _mode,

@@ -148,58 +148,61 @@ contract slcInterface  {
     }
 
     function slcTokenBuy(address tokenAddr, uint amount) public  returns(uint outputAmount){
-        IERC20(tokenAddr).transferFrom(msg.sender,address(this),amount);
+        IERC20(tokenAddr).safeTransferFrom(msg.sender,address(this),amount);
         IERC20(tokenAddr).approve(slcVaults, amount);
         outputAmount = iSlcVaults(slcVaults).slcTokenBuy( tokenAddr, amount);
 
         if(IERC20(superLibraCoin).balanceOf(address(this))>0){
-            IERC20(superLibraCoin).transfer(msg.sender,IERC20(superLibraCoin).balanceOf(address(this)));
+            IERC20(superLibraCoin).safeTransfer(msg.sender,IERC20(superLibraCoin).balanceOf(address(this)));
         }
         if(IERC20(tokenAddr).balanceOf(address(this))>0){
-            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
+            IERC20(tokenAddr).safeTransfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
         }
     }
     function slcTokenSell(address tokenAddr, uint amount) public  returns(uint outputAmount){
-        IERC20(superLibraCoin).transferFrom(msg.sender,address(this),amount);
+        IERC20(superLibraCoin).safeTransferFrom(msg.sender,address(this),amount);
         IERC20(superLibraCoin).approve(slcVaults, amount);
         outputAmount = iSlcVaults(slcVaults).slcTokenSell( tokenAddr, amount);
 
         if(IERC20(superLibraCoin).balanceOf(address(this))>0){
-            IERC20(superLibraCoin).transfer(msg.sender,IERC20(superLibraCoin).balanceOf(address(this)));
+            IERC20(superLibraCoin).safeTransfer(msg.sender,IERC20(superLibraCoin).balanceOf(address(this)));
         }
         if(IERC20(tokenAddr).balanceOf(address(this))>0){
-            IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
+            IERC20(tokenAddr).safeTransfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
         }
     }
     //---------------------------- borrow & lend  Function----------------------------
     // licensed Assets Pledge
     function licensedAssetsPledge(address tokenAddr, uint amount) public {
-        IERC20(tokenAddr).transferFrom(msg.sender,address(this),amount);
+        IERC20(tokenAddr).safeTransferFrom(msg.sender,address(this),amount);
         IERC20(tokenAddr).approve(slcVaults, amount);
         iSlcVaults(slcVaults).licensedAssetsPledge( tokenAddr, amount, msg.sender);
     }
     // redeem Pledged Assets
     function redeemPledgedAssets(address tokenAddr, uint amount) public {
         iSlcVaults(slcVaults).redeemPledgedAssets( tokenAddr, amount, msg.sender);
-        IERC20(tokenAddr).transfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
+        IERC20(tokenAddr).safeTransfer(msg.sender,IERC20(tokenAddr).balanceOf(address(this)));
     }
     // obtain SLC coin
     function obtainSLC(uint amount) public {
-        require(UserLatestBlockNumber[msg.sender] < block.number,"SLC Interface: Same block can only have ONE obtain operation");
+        require(UserLatestBlockNumber[msg.sender] < block.number,"SLC Interface: ONE block only ONE operation.");
+        if( iSlcVaults(slcVaults).latestBlockNumber() == block.number){
+            require(iSlcVaults(slcVaults).latestBlockUser() != msg.sender,"SLC Interface: ONE block only ONE operation. b");
+        }
         UserLatestBlockNumber[msg.sender] = block.number;
         iSlcVaults(slcVaults).obtainSLC(amount, msg.sender);
-        IERC20(superLibraCoin).transfer(msg.sender,amount);
+        IERC20(superLibraCoin).safeTransfer(msg.sender,amount);
     }
     // return SLC coin
     function returnSLC(uint amount) public {
-        IERC20(superLibraCoin).transferFrom(msg.sender,address(this),amount);
+        IERC20(superLibraCoin).safeTransferFrom(msg.sender,address(this),amount);
         IERC20(superLibraCoin).approve(slcVaults, amount);
         iSlcVaults(slcVaults).returnSLC(amount, msg.sender);
     }
     function returnAllSLC() public {
         uint amount;
         (,,amount,) = viewUsersHealthFactor(msg.sender);
-        IERC20(superLibraCoin).transferFrom(msg.sender,address(this),amount);
+        IERC20(superLibraCoin).safeTransferFrom(msg.sender,address(this),amount);
         IERC20(superLibraCoin).approve(slcVaults, amount);
         iSlcVaults(slcVaults).returnSLC(amount, msg.sender);
     }
@@ -209,14 +212,14 @@ contract slcInterface  {
         IERC20(wxCFX).approve(slcVaults, msg.value);
         outputAmount = iSlcVaults(slcVaults).slcTokenBuy( wxCFX , msg.value);
         if(IERC20(superLibraCoin).balanceOf(address(this))>0){
-            IERC20(superLibraCoin).transfer(msg.sender,IERC20(superLibraCoin).balanceOf(address(this)));
+            IERC20(superLibraCoin).safeTransfer(msg.sender,IERC20(superLibraCoin).balanceOf(address(this)));
         }
         if(IERC20(wxCFX).balanceOf(address(this))>0){
-            IERC20(wxCFX).transfer(msg.sender,IERC20(wxCFX).balanceOf(address(this)));
+            IERC20(wxCFX).safeTransfer(msg.sender,IERC20(wxCFX).balanceOf(address(this)));
         }
     }
     function sellSlcToCFX(uint amount) public  returns(uint outputAmount){
-        IERC20(superLibraCoin).transferFrom(msg.sender,address(this),amount);
+        IERC20(superLibraCoin).safeTransferFrom(msg.sender,address(this),amount);
         IERC20(superLibraCoin).approve(slcVaults, amount);
         outputAmount = iSlcVaults(slcVaults).slcTokenSell( wxCFX, amount);
 
@@ -226,7 +229,7 @@ contract slcInterface  {
         (bool success, ) = receiver.call{value:amount}("");
         require(success,"X SLC Interface: CFX Transfer Failed");
         if(IERC20(superLibraCoin).balanceOf(address(this))>0){
-            IERC20(superLibraCoin).transfer(msg.sender,IERC20(superLibraCoin).balanceOf(address(this)));
+            IERC20(superLibraCoin).safeTransfer(msg.sender,IERC20(superLibraCoin).balanceOf(address(this)));
         }
     }
 

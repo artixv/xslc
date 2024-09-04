@@ -28,6 +28,7 @@ contract slcVaults  {
     address public rebalancer;
 
     uint public latestBlockNumber;
+    address public latestBlockUser;
 
     //  Assets Init:   USDT  USDC  BTC  ETH  CFX  xCFX sxCFX NUT  CFXs
     //  MaximumLTV:     95%   95%  90%  85%  65%  65%   75%  55%  55%
@@ -39,7 +40,7 @@ contract slcVaults  {
         address  assetAddr;             
         uint     maximumLTV;           // loan-to-value (LTV) ratio is a measurement lenders use to compare your loan amount 
                                        // for a home against the value of that property.(MAX = 10000) 
-        uint     liquidationPenalty;   // MAX = 10000 ,default is 500(5%)
+        uint     liquidationPenalty;   // MAX = 2000 ,default is 500(5%)
         uint     maxDepositAmount;     // default is 0, means no limits; if > 0, have limits : 1 ether = 1 slc
         uint     mortgagedAmountDisposed;
         uint     mortgagedAmountReturned;
@@ -139,6 +140,7 @@ contract slcVaults  {
         require(licensedAssets[_asset].assetAddr == address(0),"SLC Vaults: asset already registered!");
         require(assetsSerialNumber.length < 60,"SLC Vaults: Too Many Assets");
         require(MaxLTV < 10000,"SLC Vaults: MaxLTV < 10000");
+        require(LiqPenalty <= 2000,"SLC Vaults: LiqPenalty <= 2000");
         assetsSerialNumber.push(_asset);
         licensedAssets[_asset].assetAddr = _asset;
         licensedAssets[_asset].maximumLTV = MaxLTV;
@@ -149,6 +151,7 @@ contract slcVaults  {
     function licensedAssetsReset(address _asset, uint MaxLTV, uint LiqPenalty,uint MaxDepositAmount) public onlySetter {
         require(licensedAssets[_asset].assetAddr == _asset,"SLC Vaults: asset is Not registered!");
         require(MaxLTV < 10000,"SLC Vaults: MaxLTV < 10000");
+        require(LiqPenalty <= 2000,"SLC Vaults: LiqPenalty <= 2000");
         licensedAssets[_asset].maximumLTV = MaxLTV;
         licensedAssets[_asset].liquidationPenalty = LiqPenalty;
         licensedAssets[_asset].maxDepositAmount = MaxDepositAmount;
@@ -170,15 +173,15 @@ contract slcVaults  {
         uint[2] memory tempValue;
         uint[2] memory tempLoanToValue;
         // require(assetsSerialNumber.length < 100,"SLC Vaults: Too Many Assets");
-         
+        // userAssetsMortgageAmount[user][assetsSerialNumber[i]] :: userAssetsMortgageAmount[user][assetsSerialNumber[i]] * 1 ether / iDecimals(tokenAddr).decimals()
         for(uint i=0;i<assetsSerialNumber.length;i++){
             if(licensedAssets[assetsSerialNumber[i]].maxDepositAmount == 0){
-                tempValue[0] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether;
-                tempLoanToValue[0] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether
+                tempValue[0] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals();
+                tempLoanToValue[0] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals()
                                     * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
             }else if(userModeAssetsAddress[user]==assetsSerialNumber[i]){
-                tempValue[1] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether;
-                tempLoanToValue[1] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether
+                tempValue[1] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals();
+                tempLoanToValue[1] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals()
                                     * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
             }
         }
@@ -188,18 +191,18 @@ contract slcVaults  {
 
         if(userObtainedSLCAmount[user] > 0){
             if(userMode[user] == 0){
-                userHealthFactor = (tempLoanToValue[0] * 1 ether / userObtainedSLCAmount[user]) * slcValue / 1 ether;
-                userAvailbleBorrowedSLCAmount = tempLoanToValue[0] * 1 ether / 1.2 ether;
+                userHealthFactor = (tempLoanToValue[0] / userObtainedSLCAmount[user]) * slcValue;
+                userAvailbleBorrowedSLCAmount = tempLoanToValue[0] * 10 / 12;
             }else{
-                userHealthFactor = (tempLoanToValue[1] * 1 ether / userObtainedSLCAmount[user]) * slcValue / 1 ether;
-                userAvailbleBorrowedSLCAmount = tempLoanToValue[1] * 1 ether / 1.2 ether;
+                userHealthFactor = (tempLoanToValue[1] / userObtainedSLCAmount[user]) * slcValue;
+                userAvailbleBorrowedSLCAmount = tempLoanToValue[1] * 10 / 12;
             }
         }else{
             userHealthFactor = 1000 ether;
             if(userMode[user] == 0){
-                userAvailbleBorrowedSLCAmount = tempLoanToValue[0] * 1 ether / 1.2 ether;
+                userAvailbleBorrowedSLCAmount = tempLoanToValue[0] * 10 / 12;
             }else{
-                userAvailbleBorrowedSLCAmount = tempLoanToValue[1] * 1 ether / 1.2 ether;
+                userAvailbleBorrowedSLCAmount = tempLoanToValue[1] * 10 / 12;
             }
         }
         
@@ -232,7 +235,7 @@ contract slcVaults  {
     
     //---------------------------- User Used Function--------------------------------
     function slcTokenBuyEstimateOut(address tokenAddr, uint amount) public view returns(uint outputAmount){
-        uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
+        // uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
 
         address[] memory tokens = new address[](3);
 
@@ -240,26 +243,24 @@ contract slcVaults  {
         tokens[1] = superLibraCoin;
         tokens[2] = mainCollateralToken;
         if(tokens[0] == tokens[2]){
-            outputAmount = amountNormalize * 1 ether * 99 / (100 * slcValue);
+            outputAmount = amount * 1 ether * 99 / (100 * slcValue);
         }else{
-            (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput(tokens, amountNormalize);
+            (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput(tokens, amount);
             outputAmount = outputAmount * 1 ether * 99 / (100 * slcValue);
         }
     }
 
     function slcTokenSellEstimateOut(address tokenAddr, uint amount) public view returns(uint outputAmount){
-        uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
 
         address[] memory tokens = new address[](2);
 
         tokens[0] = superLibraCoin;
         tokens[1] = tokenAddr;
 
-        (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput(tokens, amountNormalize);
+        (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput(tokens, amount);
         outputAmount = outputAmount * 96 / 100;
     }
     function slcTokenBuyEstimateIn(address tokenAddr, uint amount) public view returns(uint inputAmount){
-        uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
 
         address[] memory tokens = new address[](3);
 
@@ -267,42 +268,40 @@ contract slcVaults  {
         tokens[1] = superLibraCoin;
         tokens[2] = mainCollateralToken;
         if(tokens[0] == tokens[2]){
-            inputAmount = amountNormalize * 1 ether * 100 / (99 * slcValue);
+            inputAmount = amount * 1 ether / iDecimals(tokenAddr).decimals() * 1 ether * 100 / (99 * slcValue);
         }else{
-            (inputAmount,) = ixInterface(xInterface).xExchangeEstimateOutput(tokens, amountNormalize * 1 ether * 100 / (99 * slcValue));
+            (inputAmount,) = ixInterface(xInterface).xExchangeEstimateOutput(tokens, amount * 1 ether * 100 / (99 * slcValue));
         }
     }
 
     function slcTokenSellEstimateIn(address tokenAddr, uint amount) public view returns(uint inputAmount){
 
-        uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
         address[] memory tokens = new address[](2);
 
         tokens[0] = superLibraCoin;
         tokens[1] = tokenAddr;
 
-        (inputAmount,) = ixInterface(xInterface).xExchangeEstimateOutput(tokens, amountNormalize * 100 / 96);
+        (inputAmount,) = ixInterface(xInterface).xExchangeEstimateOutput(tokens, amount * 100 / 96);
     }
     //---------------------------- Mint&Burn Function--------------------------------
     // Use licensedAssets to mint SLC
     function slcTokenBuy(address tokenAddr, uint amount) public returns(uint outputAmount){
-        uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
         address[] memory tokens = new address[](3);
         tokens[0] = tokenAddr;
         tokens[1] = superLibraCoin;
         tokens[2] = mainCollateralToken;
-        (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput(tokens, amount);
-        IERC20(tokenAddr).transferFrom(msg.sender,address(this),amount);
+        (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput( tokens, amount);
+        IERC20(tokenAddr).safeTransferFrom(msg.sender,address(this), amount);
         IERC20(tokenAddr).approve(xInterface, amount);
         
         if(tokens[0] == tokens[2]){
-            outputAmount = amountNormalize * 1 ether * 99 / (100 * slcValue);
+            outputAmount = amount * 1 ether / iDecimals(tokenAddr).decimals() * 1 ether * 99 / (100 * slcValue);//iDecimals(tokenAddr).decimals();
         }else{
-            outputAmount = ixInterface(xInterface).xexchange(tokens,amount,outputAmount,outputAmount / 100, block.timestamp + 100);
+            outputAmount = ixInterface(xInterface).xexchange(tokens, amount, outputAmount, outputAmount / 100, block.timestamp + 100);
             outputAmount = outputAmount * 1 ether * 99 / (100 * slcValue);
         }
 
-        iSlc(superLibraCoin).mintSLC(msg.sender,outputAmount);
+        iSlc(superLibraCoin).mintSLC(msg.sender, outputAmount);
         slcUnsecuredIssuancesAmount += outputAmount;
         emit SlcTokenBuy(msg.sender, tokenAddr, amount, outputAmount);
     
@@ -331,7 +330,7 @@ contract slcVaults  {
 
         IERC20(mainCollateralToken).approve(xInterface, amount);
         outputAmount = ixInterface(xInterface).xexchange(tokensT,amount,outputAmount,outputAmount / 50, block.timestamp + 100);
-        IERC20(tokenAddr).transfer(msg.sender,outputAmount);
+        IERC20(tokenAddr).safeTransfer(msg.sender,outputAmount);
         emit SlcTokenSell(msg.sender, tokenAddr, amount, outputAmount);
     
     }
@@ -339,7 +338,6 @@ contract slcVaults  {
     //---------------------------- borrow & lend  Function----------------------------
     // licensed Assets Pledge
     function licensedAssetsPledge(address tokenAddr, uint amount, address user) public  {
-        uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
         require(licensedAssets[tokenAddr].assetAddr == tokenAddr,"SLC Vaults: Token Not registered");
         if(slcInterface[msg.sender]==false){
             require(user == msg.sender,"SLC Vaults: Not registered as slcInterface or user need be msg.sender!");
@@ -351,15 +349,14 @@ contract slcVaults  {
         }else{
             require((tokenAddr == userModeAssetsAddress[user]) && (userMode[user] == 1),"SLC Vaults: Wrong Mode, Need a  Non-Popular Mode");
         }
-        IERC20(tokenAddr).transferFrom(msg.sender,address(this),amount);
-        userAssetsMortgageAmount[user][tokenAddr] += amountNormalize;
-        userAssetsMortgageAmountSum[tokenAddr] += amountNormalize;
+        IERC20(tokenAddr).safeTransferFrom(msg.sender,address(this),amount);
+        userAssetsMortgageAmount[user][tokenAddr] += amount;
+        userAssetsMortgageAmountSum[tokenAddr] += amount;
         emit LicensedAssetsPledge(msg.sender, tokenAddr, amount, user);
     }
 
     // redeem Pledged Assets
     function redeemPledgedAssets(address tokenAddr, uint amount, address user) public  {
-        uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
         if(slcInterface[msg.sender]==false){
             require(user == msg.sender,"SLC Vaults: Not registered as slcInterface or user need be msg.sender!");
         }
@@ -370,10 +367,10 @@ contract slcVaults  {
         }else{
             require((TokenAddr == userModeAssetsAddress[user]) && (userMode[user] == 1),"SLC Vaults: Wrong Mode, Need a  Non-Popular Mode");
         }*/
-        userAssetsMortgageAmount[user][tokenAddr] -= amountNormalize;
-        userAssetsMortgageAmountSum[tokenAddr] -= amountNormalize;
+        userAssetsMortgageAmount[user][tokenAddr] -= amount;
+        userAssetsMortgageAmountSum[tokenAddr] -= amount;
         uint factor;
-        IERC20(tokenAddr).transfer(msg.sender,amount);
+        IERC20(tokenAddr).safeTransfer(msg.sender,amount);
         (factor, ,,) = viewUsersHealthFactor(user);
         require( factor >= 1.2 ether,"Your Health Factor < 1.2, Cant redeem assets");
         emit RedeemPledgedAssets(msg.sender, tokenAddr, amount, user);
@@ -389,6 +386,7 @@ contract slcVaults  {
         require(amount > 0,"SLC Vaults: Cant Pledge 0 amount");
 
         latestBlockNumber = block.number;
+        latestBlockUser = user;
         uint factor;
         iSlc(superLibraCoin).mintSLC(msg.sender,amount);
         userObtainedSLCAmount[user] += amount;
@@ -426,34 +424,32 @@ contract slcVaults  {
     function usersHealthFactorEstimate(address user,address token,uint amount,bool operator) public view returns(uint userHealthFactor){
         uint tempValue;
         uint[2] memory tempLoanToValue;
-        uint amountNormalize = amount * 1 ether / iDecimals(token).decimals();
-        // require(assetsSerialNumber.length < 100,"SLC Vaults: Too Many Assets");
-         
+        // userAssetsMortgageAmount[user][assetsSerialNumber[i]] :: userAssetsMortgageAmount[user][assetsSerialNumber[i]] * 1 ether / iDecimals(tokenAddr).decimals()
         for(uint i=0;i<assetsSerialNumber.length;i++){
             if(licensedAssets[assetsSerialNumber[i]].maxDepositAmount == 0){
                 if(token == assetsSerialNumber[i]){
-                    tempValue = amountNormalize;
+                    tempValue = amount;
                 }else{
                     tempValue = 0;
                 }
                 if(operator){
-                    tempLoanToValue[0] += (userAssetsMortgageAmount[user][assetsSerialNumber[i]] - tempValue) * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether
+                    tempLoanToValue[0] += (userAssetsMortgageAmount[user][assetsSerialNumber[i]] - tempValue) * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals()
                                         * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
                 }else{
-                    tempLoanToValue[0] += (userAssetsMortgageAmount[user][assetsSerialNumber[i]] + tempValue) * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether
+                    tempLoanToValue[0] += (userAssetsMortgageAmount[user][assetsSerialNumber[i]] + tempValue) * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals()
                                         * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
                 }
             }else if(userModeAssetsAddress[user] == assetsSerialNumber[i]){
                 if(token == assetsSerialNumber[i]){
-                    tempValue = amountNormalize;
+                    tempValue = amount;
                 }else{
                     tempValue = 0;
                 }
                 if(operator){
-                    tempLoanToValue[1] += (userAssetsMortgageAmount[user][assetsSerialNumber[i]] - tempValue) * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether
+                    tempLoanToValue[1] += (userAssetsMortgageAmount[user][assetsSerialNumber[i]] - tempValue) * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals()
                                         * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
                 }else{
-                    tempLoanToValue[1] += (userAssetsMortgageAmount[user][assetsSerialNumber[i]] + tempValue) * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / 1 ether
+                    tempLoanToValue[1] += (userAssetsMortgageAmount[user][assetsSerialNumber[i]] + tempValue) * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals()
                                         * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
                 }
             }
@@ -495,26 +491,23 @@ contract slcVaults  {
     }
     // Assets excess Disposal
     function excessDisposal(address token, uint amount) public onlyRebalancer(){
-        uint amountNormalize = amount * 1 ether / iDecimals(token).decimals();
-        require(IERC20(token).balanceOf(address(this)) > amountNormalize + userAssetsMortgageAmountSum[token],"SLC Vaults: Cant Do Excess Disposal, asset not enough!");
-        IERC20(token).transfer(msg.sender,amount);
-        licensedAssets[token].mortgagedAmountDisposed += amountNormalize;
+        require(IERC20(token).balanceOf(address(this)) > amount + userAssetsMortgageAmountSum[token],"SLC Vaults: Cant Do Excess Disposal, asset not enough!");
+        IERC20(token).safeTransfer(msg.sender,amount);
+        licensedAssets[token].mortgagedAmountDisposed += amount;
         emit MortgagedAmountDisposed(token, amount);
     
     }
     function excessAssetsReturn(address token, uint amount) public onlyRebalancer(){
-        uint amountNormalize = amount * 1 ether / iDecimals(token).decimals();
-        IERC20(token).transfer(msg.sender,amount);
-        licensedAssets[token].mortgagedAmountReturned += amountNormalize;
+        IERC20(token).safeTransfer(msg.sender,amount);
+        licensedAssets[token].mortgagedAmountReturned += amount;
         emit MortgagedAmountReturned(token, amount);
     }
 
     //------------------------------ Liquidate Function------------------------------
     // token Liquidate
     function tokenLiquidate(address user,address token, uint amount) public returns(uint outputAmount) {
-        uint amountNormalize = amount * 1 ether / iDecimals(token).decimals();
         require(amount > 0,"SLC Vaults: Cant Liquidate 0 amount");
-        require(amountNormalize <= userAssetsMortgageAmount[user][token],"SLC Vaults: amount need <= balance Of user");
+        require(amount <= userAssetsMortgageAmount[user][token],"SLC Vaults: amount need <= balance Of user");
         uint factor;
         (factor, ,,) = viewUsersHealthFactor(user);
         require(factor < 1 ether,"SLC Vaults: Liquidate user Assets, his Health Factor must < 1");
@@ -526,7 +519,7 @@ contract slcVaults  {
         IERC20(token).approve(xInterface, amount);
         
         if(tokens[0] == mainCollateralToken){
-            outputAmount = amountNormalize * 1 ether * (10000-licensedAssets[token].liquidationPenalty) / (10000 * slcValue);
+            outputAmount = amount * 1 ether * (10000-licensedAssets[token].liquidationPenalty) / (10000 * slcValue);
         }else{
             (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput(tokens, amount);
             outputAmount = ixInterface(xInterface).xexchange(tokens, amount, outputAmount, outputAmount / 100, block.timestamp + 100);
@@ -535,10 +528,10 @@ contract slcVaults  {
         require(userObtainedSLCAmount[user] >= outputAmount,"");
         slcUnsecuredIssuancesAmount += outputAmount;
         userObtainedSLCAmount[user] -= outputAmount;
-        userAssetsMortgageAmountSum[token] -= amountNormalize;
-        userAssetsMortgageAmount[user][token] -= amountNormalize;
+        userAssetsMortgageAmountSum[token] -= amount;
+        userAssetsMortgageAmount[user][token] -= amount;
 
-        IERC20(token).transfer(msg.sender,amountNormalize/10000);
+        IERC20(token).safeTransfer(msg.sender,amount/10000);
         emit TokenLiquidate(msg.sender, token, amount, outputAmount);
     }
     function tokenLiquidateEstimate(address user,address token) public view returns(uint maxAmount){
