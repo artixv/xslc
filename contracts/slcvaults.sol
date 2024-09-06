@@ -243,7 +243,7 @@ contract slcVaults  {
         tokens[1] = superLibraCoin;
         tokens[2] = mainCollateralToken;
         if(tokens[0] == tokens[2]){
-            outputAmount = amount * 1 ether * 99 / (100 * slcValue);
+            outputAmount = amount * 1 ether / iDecimals(tokenAddr).decimals() * 1 ether * 99 / (100 * slcValue);
         }else{
             (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput(tokens, amount);
             outputAmount = outputAmount * 1 ether * 99 / (100 * slcValue);
@@ -534,6 +534,7 @@ contract slcVaults  {
         IERC20(token).safeTransfer(msg.sender,amount/10000);
         emit TokenLiquidate(msg.sender, token, amount, outputAmount);
     }
+
     function tokenLiquidateEstimate(address user,address token) public view returns(uint maxAmount){
         uint factor;
         uint tempAmount = userObtainedSLCAmount[user];//userAssetsMortgageAmount[user][token];
@@ -547,10 +548,10 @@ contract slcVaults  {
         tokens[1] = superLibraCoin;
         tokens[2] = mainCollateralToken;
         if(tokens[0] == mainCollateralToken){
-            maxAmount = tempAmount * 1 ether * (10000 - licensedAssets[token].liquidationPenalty) / (10000 * slcValue);
+            maxAmount = tempAmount * 1 ether * (10000 * slcValue) / (10000 - licensedAssets[token].liquidationPenalty);
         }else{
             (maxAmount,) = ixInterface(xInterface).xExchangeEstimateOutput(tokens, tempAmount);
-            maxAmount = maxAmount * 1 ether * (10000 - licensedAssets[token].liquidationPenalty) / (10000 * slcValue);
+            maxAmount = maxAmount * 1 ether * (10000 * slcValue) / (10000 - licensedAssets[token].liquidationPenalty);
         }
         if(maxAmount > userAssetsMortgageAmount[user][token]){
             maxAmount = userAssetsMortgageAmount[user][token];
