@@ -173,7 +173,7 @@ contract slcVaults  {
         uint[2] memory tempValue;
         uint[2] memory tempLoanToValue;
         // require(assetsSerialNumber.length < 100,"SLC Vaults: Too Many Assets");
-        // userAssetsMortgageAmount[user][assetsSerialNumber[i]] :: userAssetsMortgageAmount[user][assetsSerialNumber[i]] * 1 ether / iDecimals(tokenAddr).decimals()
+        // userAssetsMortgageAmount[user][assetsSerialNumber[i]] :: userAssetsMortgageAmount[user][assetsSerialNumber[i]] * 1 ether / (10**iDecimals(tokenAddr).decimals())
         for(uint i=0;i<assetsSerialNumber.length;i++){
             if(licensedAssets[assetsSerialNumber[i]].maxDepositAmount == 0){
                 tempValue[0] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals();
@@ -235,7 +235,7 @@ contract slcVaults  {
     
     //---------------------------- User Used Function--------------------------------
     function slcTokenBuyEstimateOut(address tokenAddr, uint amount) public view returns(uint outputAmount){
-        // uint amountNormalize = amount * 1 ether / iDecimals(tokenAddr).decimals();
+        // uint amountNormalize = amount * 1 ether / (10**iDecimals(tokenAddr).decimals());
 
         address[] memory tokens = new address[](3);
 
@@ -243,7 +243,7 @@ contract slcVaults  {
         tokens[1] = superLibraCoin;
         tokens[2] = mainCollateralToken;
         if(tokens[0] == tokens[2]){
-            outputAmount = amount * 1 ether / iDecimals(tokenAddr).decimals() * 1 ether * 99 / (100 * slcValue);
+            outputAmount = amount * 1 ether / (10**iDecimals(tokenAddr).decimals()) * 1 ether * 99 / (100 * slcValue);
         }else{
             (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput(tokens, amount);
             outputAmount = outputAmount * 1 ether * 99 / (100 * slcValue);
@@ -268,7 +268,7 @@ contract slcVaults  {
         tokens[1] = superLibraCoin;
         tokens[2] = mainCollateralToken;
         if(tokens[0] == tokens[2]){
-            inputAmount = amount * 1 ether / iDecimals(tokenAddr).decimals() * 1 ether * 100 / (99 * slcValue);
+            inputAmount = amount * 1 ether / (10**iDecimals(tokenAddr).decimals()) * 1 ether * 100 / (99 * slcValue);
         }else{
             (inputAmount,) = ixInterface(xInterface).xExchangeEstimateOutput(tokens, amount * 1 ether * 100 / (99 * slcValue));
         }
@@ -290,13 +290,14 @@ contract slcVaults  {
         tokens[0] = tokenAddr;
         tokens[1] = superLibraCoin;
         tokens[2] = mainCollateralToken;
-        (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput( tokens, amount);
+        
         IERC20(tokenAddr).safeTransferFrom(msg.sender,address(this), amount);
         IERC20(tokenAddr).approve(xInterface, amount);
         
         if(tokens[0] == tokens[2]){
-            outputAmount = amount * 1 ether / iDecimals(tokenAddr).decimals() * 1 ether * 99 / (100 * slcValue);//iDecimals(tokenAddr).decimals();
+            outputAmount = amount * 1 ether / (10**iDecimals(tokenAddr).decimals()) * 1 ether * 99 / (100 * slcValue);//(10**iDecimals(tokenAddr).decimals());
         }else{
+            (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput( tokens, amount);
             outputAmount = ixInterface(xInterface).xexchange(tokens, amount, outputAmount, outputAmount / 100, block.timestamp + 100);
             outputAmount = outputAmount * 1 ether * 99 / (100 * slcValue);
         }
@@ -424,7 +425,7 @@ contract slcVaults  {
     function usersHealthFactorEstimate(address user,address token,uint amount,bool operator) public view returns(uint userHealthFactor){
         uint tempValue;
         uint[2] memory tempLoanToValue;
-        // userAssetsMortgageAmount[user][assetsSerialNumber[i]] :: userAssetsMortgageAmount[user][assetsSerialNumber[i]] * 1 ether / iDecimals(tokenAddr).decimals()
+        // userAssetsMortgageAmount[user][assetsSerialNumber[i]] :: userAssetsMortgageAmount[user][assetsSerialNumber[i]] * 1 ether / (10**iDecimals(tokenAddr).decimals())
         for(uint i=0;i<assetsSerialNumber.length;i++){
             if(licensedAssets[assetsSerialNumber[i]].maxDepositAmount == 0){
                 if(token == assetsSerialNumber[i]){
