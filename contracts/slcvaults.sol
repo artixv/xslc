@@ -14,6 +14,8 @@ import "./interfaces/iDecimals.sol";
 contract slcVaults  {
     using SafeERC20 for IERC20;
 
+    uint public stableCoinType = 2;
+
     address public superLibraCoin;
     uint    public slcValue;
     uint    public slcUnsecuredIssuancesAmount;
@@ -77,8 +79,8 @@ contract slcVaults  {
     event SlcTokenSell(address indexed seller,address tokenAddr, uint amount, uint outputAmount);
     event LicensedAssetsPledge(address indexed msgSender, address tokenAddr, uint amount, address user);
     event RedeemPledgedAssets(address indexed msgSender, address tokenAddr, uint amount, address user);
-    event ObtainSLC(address indexed msgSender, uint amount, address user) ;
-    event ReturnSLC(address indexed msgSender, uint amount, address user) ;
+    event ObtainSLC(address indexed msgSender, uint amount, address user);
+    event ReturnSLC(address indexed msgSender, uint amount, address user);
 
     event SlCValue(uint value);
     event MainCollateralToken(address token);
@@ -118,8 +120,10 @@ contract slcVaults  {
         xInterface = _xInterface;
         oracleAddr = _oracleAddr;
     }
-    function rewardContractSetup(address _rewardContract) external onlySetter{
+    function rewardContractSetup(address _rewardContract,uint _stableCoinType) external onlySetter{
         rewardContract = _rewardContract;
+        stableCoinType = _stableCoinType;
+        iRewardMini(rewardContract).factoryUsedRegist(address(this), stableCoinType);
     }
     function setSlcInterface(address _ifSlcInterface, bool _ToF) external onlySetter{
         slcInterface[_ifSlcInterface] = _ToF;
@@ -163,6 +167,12 @@ contract slcVaults  {
             require(user == msg.sender,"SLC Vaults: Not registered as slcInterface or user need be msg.sender!");
         }
         require(userObtainedSLCAmount[user] == 0,"SLC Vaults: Cant Change Mode before return all SLC.");
+        if(_mode == 1){
+            require(licensedAssets[_userModeAssetsAddress].maxDepositAmount > 0,"SLC Vaults: Wrong Mode. err 1");
+        }else{
+            require(_mode == 0,"SLC Vaults: Wrong Mode. err 2");
+        }
+
         userMode[user] = _mode;
         userModeAssetsAddress[user] = _userModeAssetsAddress;
         emit UserModeSetting(user, _mode, _userModeAssetsAddress);
@@ -176,12 +186,12 @@ contract slcVaults  {
         // userAssetsMortgageAmount[user][assetsSerialNumber[i]] :: userAssetsMortgageAmount[user][assetsSerialNumber[i]] * 1 ether / (10**iDecimals(tokenAddr).decimals())
         for(uint i=0;i<assetsSerialNumber.length;i++){
             if(licensedAssets[assetsSerialNumber[i]].maxDepositAmount == 0){
-                tempValue[0] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals();
-                tempLoanToValue[0] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals()
+                tempValue[0] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / (10**iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals());
+                tempLoanToValue[0] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / (10**iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals())
                                     * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
             }else if(userModeAssetsAddress[user]==assetsSerialNumber[i]){
-                tempValue[1] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals();
-                tempLoanToValue[1] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals()
+                tempValue[1] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) /  (10**iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals());
+                tempLoanToValue[1] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) /  (10**iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals())
                                     * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
             }
         }
@@ -434,10 +444,10 @@ contract slcVaults  {
                     tempValue = 0;
                 }
                 if(operator){
-                    tempLoanToValue[0] += (userAssetsMortgageAmount[user][assetsSerialNumber[i]] - tempValue) * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals()
+                    tempLoanToValue[0] += (userAssetsMortgageAmount[user][assetsSerialNumber[i]] - tempValue) * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) /  (10**iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals())
                                         * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
                 }else{
-                    tempLoanToValue[0] += (userAssetsMortgageAmount[user][assetsSerialNumber[i]] + tempValue) * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals()
+                    tempLoanToValue[0] += (userAssetsMortgageAmount[user][assetsSerialNumber[i]] + tempValue) * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) /  (10**iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals())
                                         * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
                 }
             }else if(userModeAssetsAddress[user] == assetsSerialNumber[i]){
@@ -447,10 +457,10 @@ contract slcVaults  {
                     tempValue = 0;
                 }
                 if(operator){
-                    tempLoanToValue[1] += (userAssetsMortgageAmount[user][assetsSerialNumber[i]] - tempValue) * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals()
+                    tempLoanToValue[1] += (userAssetsMortgageAmount[user][assetsSerialNumber[i]] - tempValue) * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) /  (10**iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals())
                                         * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
                 }else{
-                    tempLoanToValue[1] += (userAssetsMortgageAmount[user][assetsSerialNumber[i]] + tempValue) * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals()
+                    tempLoanToValue[1] += (userAssetsMortgageAmount[user][assetsSerialNumber[i]] + tempValue) * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) /  (10**iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals())
                                         * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
                 }
             }
