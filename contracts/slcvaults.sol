@@ -186,12 +186,16 @@ contract slcVaults  {
         // userAssetsMortgageAmount[user][assetsSerialNumber[i]] :: userAssetsMortgageAmount[user][assetsSerialNumber[i]] * 1 ether / (10**iDecimals(tokenAddr).decimals())
         for(uint i=0;i<assetsSerialNumber.length;i++){
             if(licensedAssets[assetsSerialNumber[i]].maxDepositAmount == 0){
-                tempValue[0] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / (10**iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals());
-                tempLoanToValue[0] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) / (10**iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals())
+                tempValue[0] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) 
+                              / (10**iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals());
+                tempLoanToValue[0] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) 
+                                    / (10**iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals())
                                     * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
             }else if(userModeAssetsAddress[user]==assetsSerialNumber[i]){
-                tempValue[1] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) /  (10**iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals());
-                tempLoanToValue[1] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) /  (10**iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals())
+                tempValue[1] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) 
+                              / (10**iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals());
+                tempLoanToValue[1] += userAssetsMortgageAmount[user][assetsSerialNumber[i]] * iSlcOracle(oracleAddr).getPrice(assetsSerialNumber[i]) 
+                                    / (10**iDecimals(licensedAssets[assetsSerialNumber[i]].assetAddr).decimals())
                                     * licensedAssets[assetsSerialNumber[i]].maximumLTV / 10000;
             }
         }
@@ -201,10 +205,10 @@ contract slcVaults  {
 
         if(userObtainedSLCAmount[user] > 0){
             if(userMode[user] == 0){
-                userHealthFactor = (tempLoanToValue[0] / userObtainedSLCAmount[user]) * slcValue;
+                userHealthFactor = slcValue * tempLoanToValue[0] / userObtainedSLCAmount[user];
                 userAvailbleBorrowedSLCAmount = tempLoanToValue[0] * 10 / 12;
             }else{
-                userHealthFactor = (tempLoanToValue[1] / userObtainedSLCAmount[user]) * slcValue;
+                userHealthFactor = slcValue * tempLoanToValue[1] / userObtainedSLCAmount[user];
                 userAvailbleBorrowedSLCAmount = tempLoanToValue[1] * 10 / 12;
             }
         }else{
@@ -499,6 +503,17 @@ contract slcVaults  {
         (outputAmount,) = ixInterface(xInterface).xExchangeEstimateInput(tokens, amount);
         outputAmount = ixInterface(xInterface).xexchange(tokens,amount,outputAmount,outputAmount / 100, block.timestamp + 100);
         emit Rebalance(tokens, amount, outputAmount);
+    }
+    function rebalanceBurn(uint amount) public onlyRebalancer() {
+        require(IERC20(mainCollateralToken).balanceOf(address(this)) > amount + userAssetsMortgageAmountSum[mainCollateralToken],"SLC Vaults: Cant Do Excess Disposal, asset not enough!");
+        iSlc(superLibraCoin).burnSLC(msg.sender,amount);
+        IERC20(mainCollateralToken).safeTransfer(msg.sender,amount);
+        if(slcUnsecuredIssuancesAmount > amount){
+            slcUnsecuredIssuancesAmount -= amount;
+        }else{
+            slcUnsecuredIssuancesAmount = 0;
+        }
+        emit ReturnSLC(msg.sender, amount, msg.sender);
     }
     // Assets excess Disposal
     function excessDisposal(address token, uint amount) public onlyRebalancer(){
