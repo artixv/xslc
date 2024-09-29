@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Business Source License 1.1
-// First Release Time : 2024.07.30
+// First Release Time : 2024.09.30
 
 pragma solidity 0.8.6;
 
@@ -34,7 +34,7 @@ contract slcVaults  {
 
     //  Assets Init:   USDT  USDC  BTC  ETH  CFX  xCFX sxCFX NUT  CFXs
     //  MaximumLTV:     95%   95%  90%  85%  65%  65%   75%  55%  55%
-    //  LiqPenalty:      5%    5%   5%   5%   5%   5%    5%   5%   5%
+    //  LiqPenalty:      2%    2%   3%   4%   4%   4%    4%   5%   5%
     //MaxDepositAmount:  0     0    0    0    0    0      0  1e6  1e6
 
 

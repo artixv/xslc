@@ -5,12 +5,12 @@ pragma solidity 0.8.6;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract superLibraCoin is ERC20 {
+contract superLibraCoinUSD is ERC20 {
     address public slcManager;
     address public setter;
     address newsetter;
 
-    constructor(address _slcManager) ERC20("Super Libra Coin", "SLC") {
+    constructor(address _slcManager) ERC20("Super Libra Coin - USD", "sUSD") {
         setter = msg.sender;
         slcManager = _slcManager;
     }
