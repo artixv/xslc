@@ -82,7 +82,7 @@ contract slcVaults  {
     event ObtainSLC(address indexed msgSender, uint amount, address user);
     event ReturnSLC(address indexed msgSender, uint amount, address user);
 
-    event SlCValue(uint value);
+    event SlcValue(uint value);
     event MainCollateralToken(address token);
     event Rebalance(address[] tokens, uint amount, uint outputAmount);
     event MortgagedAmountDisposed(address indexed token, uint amount);
@@ -133,7 +133,7 @@ contract slcVaults  {
     // Evaluate the value of superLibraCoin
     function slcValueRevaluate(uint newVaule) public  onlySetter {
         slcValue = newVaule;
-        emit SlCValue(newVaule);
+        emit SlcValue(newVaule);
     }
 
     function mainCollateralTokenSetting(address token) public  onlySetter {

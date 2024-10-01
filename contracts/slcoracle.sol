@@ -16,6 +16,9 @@ contract slcOracle {
     address public  sxcfxaddr;
     address public  wxcfxaddr;// wxcfx == cfx
 
+    address public  usdtAddr;
+    address public  usdcAddr;
+
     address public setter;
     address newsetter;
 
@@ -59,6 +62,11 @@ contract slcOracle {
         sxcfxaddr = _sxcfxaddr;
         wxcfxaddr = _wxcfxaddr;
         exchangRoomAddr = _exchangRoomAddr;
+    }
+    function usdsetup( address _usdtAddr,
+                       address _usdcAddr) external onlySetter{
+        usdcAddr = _usdcAddr;
+        usdtAddr = _usdtAddr;
     }
 
     function TokenToPythIdSetup(address tokenAddress, bytes32 pythId) external onlySetter{
@@ -119,7 +127,10 @@ contract slcOracle {
     function getPrice(address token) external view returns (uint price){
         uint x ;
         if(token == slcAddress){
-            return slcValue;
+            return ((1 ether * 1 ether / getXUnionPrice(usdtAddr) 
+                   + getPythPrice(usdtAddr) 
+                   + 1 ether * 1 ether / getXUnionPrice(usdcAddr) 
+                   + getPythPrice(usdcAddr)) / 4);
         }else if(token == sxcfxaddr){
             token = wxcfxaddr;
         }else if(token == xcfxaddr){
