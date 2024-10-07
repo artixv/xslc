@@ -322,7 +322,7 @@ contract slcVaults  {
     
     }
 
-    // Get back 95% of values in SLC
+    // Get back 96% of values in SLC
     function slcTokenSell(address tokenAddr, uint amount) public  returns(uint outputAmount) {
         iSlc(superLibraCoin).burnSLC(msg.sender,amount);
         if(slcUnsecuredIssuancesAmount > amount){
