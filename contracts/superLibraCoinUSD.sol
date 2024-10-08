@@ -10,7 +10,7 @@ contract superLibraCoinUSD is ERC20 {
     address public setter;
     address newsetter;
 
-    constructor(address _slcManager) ERC20("Super Libra Coin - USD", "sUSD") {
+    constructor(address _slcManager) ERC20("X Libra USD", "xUSD") {
         setter = msg.sender;
         slcManager = _slcManager;
     }

@@ -79,10 +79,7 @@ contract slcOracle {
     }
 
     //-----------------------------------------------------------------------------------
-  
-    // function getPrice(
-    //     bytes32 id
-    // ) external view returns (PythStructs.Price memory price){}
+
     function getPythBasicPrice(bytes32 id) internal view returns (PythStructs.Price memory price){
         price = IPyth(pythAddr).getPriceUnsafe(id);
     }
@@ -126,10 +123,12 @@ contract slcOracle {
 
     function getPrice(address token) external view returns (uint price){
         uint x ;
-        if(token == slcAddress){
-            return ((1 ether * 1 ether / getXUnionPrice(usdtAddr) 
+        uint xunionPrice = getXUnionPrice(usdtAddr);
+        uint pythPrice = getPythPrice(token);
+        if(token == slcAddress && xunionPrice != 0){
+            return ((1 ether * 1 ether / xunionPrice
                    + getPythPrice(usdtAddr) 
-                   + 1 ether * 1 ether / getXUnionPrice(usdcAddr) 
+                   + 1 ether * 1 ether / xunionPrice
                    + getPythPrice(usdcAddr)) / 4);
         }else if(token == sxcfxaddr){
             token = wxcfxaddr;
@@ -138,12 +137,12 @@ contract slcOracle {
             x=1;
         }
 
-        price = getXUnionPrice(token);
-        uint pythPrice = getPythPrice(token);
-        if(pythPrice != 0 && price != 0){
-            price = (getXUnionPrice(token) + pythPrice) / 2;
+        if(pythPrice != 0 && xunionPrice != 0){
+            price = (xunionPrice + pythPrice) / 2;
         }else if(pythPrice != 0){
             price = pythPrice;
+        }else{
+            price = xunionPrice;
         }
 
         if(x == 1){
